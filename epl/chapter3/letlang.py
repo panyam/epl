@@ -1,5 +1,5 @@
 
-from epl.common import *
+from epl.unions import *
 from epl.chapter3.constructs import *
 
 class Expr(Union):
@@ -7,9 +7,9 @@ class Expr(Union):
     number = Variant(Number)
     var = Variant(VarExpr)
     diff = Variant(DiffExpr)
-    zero = Variant(ZeroExpr)
-    ifexpr = Variant(IfExpr, checker_name = "is_if")
-    letexpr = Variant(LetExpr, checker_name = "is_let")
+    iszero = Variant(IsZeroExpr)
+    ifexpr = Variant(IfExpr, checker = "is_if", constructor = "as_if")
+    letexpr = Variant(LetExpr, checker = "is_let", constructor = "as_let")
 
 class Eval(CaseMatcher):
     # Tells which union type we are "case matching" on
@@ -20,7 +20,7 @@ class Eval(CaseMatcher):
         # We expect the signature of "valueOf" and each selected
         # subexpression to have the same arity and return type
         func, child = self.select(expr)
-        return func(child, env)
+        return func(self, child, env)
 
     @case("number")
     def valueOfNumber(self, number, env = None):
@@ -34,18 +34,18 @@ class Eval(CaseMatcher):
     def valueOfDiff(self, diff, env):
         return self.valueOf(diff.exp1, env) - self.valueOf(diff.exp2, env)
 
-    @case("zero")
-    def valueOfZero(self, zero, env):
-        return self.valueOf(zero.expr, env) == 0
+    @case("iszero")
+    def valueOfIsZero(self, iszero, env):
+        return self.valueOf(iszero.expr, env) == 0
 
     @case("ifexpr")
     def valueOfIf(self, ifexpr, env):
         result = self.valueOf(ifexpr.condition, env)
-        return self.valueOf(ifexpr.exp1 if result == 0 else ifexpr.exp2, env)
+        return self.valueOf(ifexpr.exp1 if result else ifexpr.exp2, env)
 
     @case("letexpr")
     def valueOfLet(self, letexpr, env):
-        expvals = {var: self.valueOf(exp, env) for exp in letexpr.mappings.items()}
+        expvals = {var: self.valueOf(exp, env) for var,exp in letexpr.mappings.items()}
         newenv = env.extend(**expvals)
         return self.valueOf(letexpr.body, newenv)
 

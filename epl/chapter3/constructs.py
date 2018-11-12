@@ -7,7 +7,7 @@ class VarExpr(object):
     def __init__(self, name):
         self.name = name
 
-class ZeroExpr(object):
+class IsZeroExpr(object):
     def __init__(self, expr):
         self.expr = expr
 
@@ -23,7 +23,7 @@ class IfExpr(object):
         self.exp2 = exp2
 
 class LetExpr(object):
-    def __init__(self, **mappings):
+    def __init__(self, mappings, body):
         self.mappings = mappings
         self.body = body
 

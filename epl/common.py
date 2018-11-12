@@ -1,7 +1,4 @@
 
-from ipdb import set_trace
-from unions import *
-
 class IEnv(object):
     """ An environment provides mappings between a variable and its values. """
     def __init__(self, parent = None):
@@ -23,7 +20,9 @@ class DefaultEnv(IEnv):
 
     def get(self, var):
         """ Applies a given function on a variable within this environment. """
-        return self.values[var]
+        if var in self.values: return self.values[var]
+        elif self.parent: return self.parent.get(var)
+        else: return None
 
     def set(self, **var_and_values):
         for k,v in var_and_values.items():

@@ -1,15 +1,16 @@
 from ipdb import set_trace
 
 class Variant(object):
-    def __init__(self, vartype, checker_name = None):
+    def __init__(self, vartype, checker = None, constructor = None):
         self.vartype = vartype
-        self.checker_name = checker_name
+        self.checker = checker
+        self.constructor = constructor
 
 class UnionMeta(type):
     def __new__(cls, name, bases, dct):
         x = super().__new__(cls, name, bases, dct)
         def makechecker(vtype):
-            return property(lambda x: isinstance(x.value, vtype))
+            return property(lambda x: isinstance(x._variant_value, vtype))
 
         def makegetter(checker, vtype):
             def getter(self):
@@ -33,20 +34,22 @@ class UnionMeta(type):
             if not isinstance(variant, Variant): continue
 
             __variants__.append((vname, variant))
-            if not variant.checker_name:
-                variant.checker_name = "is_" + vname
+            if not variant.checker:
+                variant.checker = "is_" + vname
+            if not variant.constructor:
+                variant.constructor = "as_" + vname
 
-            vtype,checker = variant.vartype, variant.checker_name 
+            vtype,checker = variant.vartype, variant.checker
             newfields[checker] = makechecker(vtype)
             newfields[vname] = makegetter(checker, vtype)
-            newfields["as_" + vname] = makeconstructor(vtype)
+            newfields[variant.constructor] = makeconstructor(vtype)
         for k,v in newfields.items(): setattr(x,k,v)
         setattr(x, "__variants__", __variants__)
         return x
 
 class Union(metaclass = UnionMeta):
     @property
-    def value(self):
+    def variant_value(self):
         return self._variant_value
 
     @classmethod
@@ -87,6 +90,6 @@ class CaseMatcherMeta(type):
 class CaseMatcher(metaclass = CaseMatcherMeta):
     def select(self, expr : Union):
         for vname, variant in expr.__variants__:
-            if getattr(expr, variant.checker_name):
-                return self._cases[vname], expr.variant_value
+            if getattr(expr, variant.checker):
+                return self.__cases__[vname], expr.variant_value
         assert False, "Case not matched"
