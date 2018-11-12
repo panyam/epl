@@ -87,6 +87,10 @@ class Union(metaclass = UnionMeta):
     def hasvariant(cls, name):
         return name in (n for n,v in cls.__variants__)
 
+    @classmethod
+    def numvariants(cls):
+        return len(cls.__variants__)
+
 def case(name):
     def decorator(func):
         func.__case_matching_on__ = name
@@ -97,15 +101,21 @@ class CaseMatcherMeta(type):
     def __new__(cls, name, bases, dct):
         x = super().__new__(cls, name, bases, dct)
         caseon = getattr(x, "__caseon__", None)
-        assert caseon or name == "CaseMatcher", "Case matcher MUST have a __caseon__ class attribute to indicate union type we can switch on"
+        if not caseon and name != "CaseMatcher":
+            raise Exception("Case matcher MUST have a __caseon__ class attribute to indicate union type we can switch on")
+
         x.__cases__ = getattr(x, "__cases__", {}).copy()
         for name,casefunc in x.__dict__.items():
-            matched_on = getattr(casefunc, "__case_matching_on__", None)
-            if not matched_on: continue
+            if not hasattr(casefunc, "__case_matching_on__"): continue
+
+            matched_on = casefunc.__case_matching_on__
+            # TODO - Should we treat matched_on == None as the "default" case?
 
             if not caseon.hasvariant(matched_on):
-                assert False, "Selected union (%s) type does not have variant being matched on (%s)." % (caseon, matched_on)
+                raise Exception("Selected union (%s) type does not have variant being matched on (%s)." % (caseon, matched_on))
             x.__cases__[matched_on] = casefunc
+        if x.__cases__ and len(x.__cases__) != caseon.numvariants():
+            raise Exception("Not all variants in union (%s) have been matched" % caseon)
         return x
 
 class CaseMatcher(metaclass = CaseMatcherMeta):
