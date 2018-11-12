@@ -17,9 +17,9 @@ class IEnv(object):
 
 class DefaultEnv(IEnv):
     """ A default environment. """
-    def __init__(self, parent = None):
+    def __init__(self, parent = None, **values):
         IEnv.__init__(self, parent)
-        self.values = {}
+        self.values = values.copy()
 
     def get(self, var):
         """ Applies a given function on a variable within this environment. """

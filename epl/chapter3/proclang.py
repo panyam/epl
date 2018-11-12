@@ -28,4 +28,3 @@ class Eval(letlang.Eval):
         newenv = saved_env.extend(**newargs)
         return valueOf(procexpr.body, newenv)
 
-set_trace()

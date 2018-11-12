@@ -1,5 +1,6 @@
 
-from constructs import *
+from epl.common import *
+from epl.chapter3.constructs import *
 
 class Expr(Union):
     # Convert this into a union metaclass
