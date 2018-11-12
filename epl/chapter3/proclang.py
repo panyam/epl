@@ -1,8 +1,18 @@
 
 
 from epl.unions import *
-from epl.chapter3.constructs import *
 from epl.chapter3 import letlang
+
+class ProcExpr(object):
+    def __init__(self, varnames, body):
+        if type(varnames) is str: varnames = [varnames]
+        self.varnames = varnames
+        self.body = body
+
+class CallExpr(object):
+    def __init__(self, operator, *args):
+        self.operator = operator
+        self.args = args
 
 class Expr(letlang.Expr):
     procexpr = Variant(ProcExpr, checker = "is_proc", constructor = "as_proc")
