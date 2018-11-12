@@ -84,3 +84,11 @@ def test_let3():
     env = Env()
     assert Eval().valueOf(expr, env) == -5
 
+def test_letmultiargs():
+    expr = as_let(dict(x = _7, y = _2),
+                as_let(dict(y = as_let(dict(x = as_diff(_x,_1)), as_diff(_x,_y))),
+                        as_diff(as_diff(_x,_8), _y))
+           )
+    env = Env()
+    assert Eval().valueOf(expr, env) == -5
+

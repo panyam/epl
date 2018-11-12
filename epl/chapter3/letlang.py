@@ -32,7 +32,9 @@ class Eval(CaseMatcher):
 
     @case("diff")
     def valueOfDiff(self, diff, env):
-        return self.valueOf(diff.exp1, env) - self.valueOf(diff.exp2, env)
+        val1 = self.valueOf(diff.exp1, env)
+        val2 = self.valueOf(diff.exp2, env)
+        return val1 - val2
 
     @case("iszero")
     def valueOfIsZero(self, iszero, env):

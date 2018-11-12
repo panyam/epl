@@ -28,11 +28,12 @@ class LetExpr(object):
         self.body = body
 
 class ProcExpr(object):
-    def __init__(self, vars, body):
-        self.vars = vars
+    def __init__(self, varnames, body):
+        if type(varnames) is str: varnames = [varnames]
+        self.varnames = varnames
         self.body = body
 
 class CallExpr(object):
-    def __init__(self, operator, args):
-        self.operator = vars
+    def __init__(self, operator, *args):
+        self.operator = operator
         self.args = args
