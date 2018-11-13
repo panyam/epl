@@ -41,7 +41,7 @@ def test_double():
                                    as_diff(as_call(as_var("double"), as_diff(_x, _1)), as_num(-2)))),
            },
            as_call(as_var("double"), _6))
-    assert Eval().valueOf(expr, Env()) == 55
+    assert Eval().valueOf(expr, Env()) == 12
 
 def test_oddeven():
     _13 = as_num(13)
@@ -50,4 +50,4 @@ def test_oddeven():
             "odd": (["x"], as_if(as_iszero(_x), _0, as_call(as_var("even"), as_diff(_x, _1)))),
            },
            as_call(as_var("odd"), _13))
-    assert Eval().valueOf(expr, Env()) == 55
+    assert Eval().valueOf(expr, Env()) == True

@@ -5,18 +5,30 @@ class Number(object):
     def __init__(self, value):
         self.value = value
 
+    def __repr__(self):
+        return "<Num(%d)>" % self.value
+
 class VarExpr(object):
     def __init__(self, name):
         self.name = name
+
+    def __repr__(self):
+        return "<Var(%s)>" % self.name
 
 class IsZeroExpr(object):
     def __init__(self, expr):
         self.expr = expr
 
+    def __repr__(self):
+        return "<IsZero(%s)>" % str(self.expr)
+
 class DiffExpr(object):
     def __init__(self, exp1, exp2):
         self.exp1 = exp1
         self.exp2 = exp2
+
+    def __repr__(self):
+        return "<Diff(%s, %s)>" % (str(self.exp1), str(self.exp2))
 
 class IfExpr(object):
     def __init__(self, condition, exp1, exp2):
@@ -24,10 +36,16 @@ class IfExpr(object):
         self.exp1 = exp1
         self.exp2 = exp2
 
+    def __repr__(self):
+        return "<If(%s) { %s } else { %s }>" % (str(self.condition), str(self.exp1), str(self.exp2))
+
 class LetExpr(object):
     def __init__(self, mappings, body):
         self.mappings = mappings
         self.body = body
+
+    def __repr__(self):
+        return "<Let (%s) in %s" % (", ".join(("%s = %s" % k,repr(v)) for k,v in self.mappings.items()), repr(self.body))
 
 class Expr(Union):
     # Convert this into a union metaclass

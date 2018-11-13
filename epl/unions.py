@@ -20,11 +20,12 @@ class UnionMeta(type):
                     assert False, "Invalid variant type getter called"
             return property(getter)
 
-        def makeconstructor(vtype):
+        def makeconstructor(vname, vtype):
             def constructor(cls, *args, **kwargs):
                 value = vtype(*args, **kwargs)
                 out = cls()
                 out._variant_value = value
+                out._variant_type = vname
                 return out
             return classmethod(constructor)
 
@@ -42,7 +43,7 @@ class UnionMeta(type):
             vtype,checker = variant.vartype, variant.checker
             newfields[checker] = makechecker(vtype)
             newfields[vname] = makegetter(checker, vtype)
-            newfields[variant.constructor] = makeconstructor(vtype)
+            newfields[variant.constructor] = makeconstructor(vname, vtype)
         for k,v in newfields.items(): setattr(x,k,v)
         setattr(x, "__variants__", __variants__)
         return x
@@ -52,6 +53,13 @@ class Union(metaclass = UnionMeta):
     def variant_value(self):
         return self._variant_value
 
+    @property
+    def variant_type(self):
+        return self._variant_type
+
+    def __repr__(self):
+        return "<%s.%s(%s) at %x>" % (self.__class__.__module__, self.__class__.__name__, self.variant_type, id(self))
+
     @classmethod
     def hasvariant(cls, name):
         return name in (n for n,v in cls.__variants__)
@@ -59,6 +67,12 @@ class Union(metaclass = UnionMeta):
     @classmethod
     def numvariants(cls):
         return len(cls.__variants__)
+
+def selectcase(utype):
+    def decorator(cls):
+        cls.__caseon__ = utype
+        return cls
+    return decorator
 
 def case(name):
     def decorator(func):

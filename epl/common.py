@@ -8,9 +8,13 @@ class IEnv(object):
         """ Applies a given function on a variable within this environment. """
         pass
 
+    def push(self):
+        """ Create a new environment by extending this one with new variable bindings. """
+        return self.__class__(self)
+
     def extend(self, **var_and_values):
         """ Create a new environment by extending this one with new variable bindings. """
-        return self
+        return self.push().set(**var_and_values)
 
 class DefaultEnv(IEnv):
     """ A default environment. """
@@ -22,15 +26,15 @@ class DefaultEnv(IEnv):
         """ Applies a given function on a variable within this environment. """
         if var in self.values: return self.values[var]
         elif self.parent: return self.parent.get(var)
-        else: return None
+        else:
+            import ipdb ; ipdb.set_trace()
+            return None
+
+    def setone(self, key, value):
+        self.values[key] = value
+        return self
 
     def set(self, **var_and_values):
         for k,v in var_and_values.items():
             self.values[k] = v
         return self
-
-    def extend(self, **var_and_values):
-        """ Extend the environment with new variable bindings. """
-        out = DefaultEnv(self)
-        return out.set(**var_and_values)
-
