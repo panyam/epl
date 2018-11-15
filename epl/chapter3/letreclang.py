@@ -3,7 +3,7 @@ import typing
 from epl.unions import *
 from epl.chapter3 import proclang
 
-class ProcExpr(proclang.ProcExpr):
+class NamedProcExpr(proclang.ProcExpr):
     def __init__(self, name, varnames, body):
         proclang.ProcExpr.__init__(self, varnames, body)
         self.name = name
@@ -15,7 +15,7 @@ class LetRecExpr(object):
     """
     def __init__(self, proc_map, body):
         """ proc_map ::  : typing.Dict[str, (typing.List[str], "Expr")] """
-        self.procs = {k: ProcExpr(k, v[0], v[1]) for k,v in proc_map.items()}
+        self.procs = {k: NamedProcExpr(k, v[0], v[1]) for k,v in proc_map.items()}
         self.body = body
 
 class Expr(proclang.Expr):

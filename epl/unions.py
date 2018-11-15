@@ -88,7 +88,7 @@ class CaseMatcherMeta(type):
             raise Exception("Case matcher MUST have a __caseon__ class attribute to indicate union type we can switch on")
 
         x.__cases__ = getattr(x, "__cases__", {}).copy()
-        for name,casefunc in x.__dict__.items():
+        for _,casefunc in x.__dict__.items():
             if not hasattr(casefunc, "__case_matching_on__"): continue
 
             matched_on = casefunc.__case_matching_on__
@@ -98,7 +98,11 @@ class CaseMatcherMeta(type):
                 raise Exception("Selected union (%s) type does not have variant being matched on (%s)." % (caseon, matched_on))
             x.__cases__[matched_on] = casefunc
         if x.__cases__ and len(x.__cases__) != caseon.numvariants():
-            raise Exception("Not all variants in union (%s) have been matched" % caseon)
+            cases = set(x.__cases__.keys())
+            variants = set(f for f,_ in caseon.__variants__)
+            diff = variants - cases
+            if diff:
+                raise Exception("Variants in union (%s) unmatched in CaseMatcher(%s): [%s]" % (caseon, name, ", ".join(diff)))
         return x
 
 class CaseMatcher(metaclass = CaseMatcherMeta):
@@ -107,3 +111,7 @@ class CaseMatcher(metaclass = CaseMatcherMeta):
             if getattr(expr, variant.checker):
                 return self.__cases__[vname], expr.variant_value
         assert False, "Case not matched"
+
+    def __call__(self, value, *args, **kwargs):
+        func, child = self.select(value)
+        return func(self, child, *args, **kwargs)

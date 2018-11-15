@@ -64,8 +64,9 @@ class Eval(CaseMatcher):
     def valueOf(self, expr, env):
         # We expect the signature of "valueOf" and each selected
         # subexpression to have the same arity and return type
-        func, child = self.select(expr)
-        return func(self, child, env)
+        return self(expr, env)
+        # func, child = self.select(expr)
+        # return func(self, child, env)
 
     @case("number")
     def valueOfNumber(self, number, env = None):

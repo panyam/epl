@@ -3,6 +3,8 @@
 from epl.unions import *
 from epl.chapter3 import letlang
 
+## Constructs for Procedures 
+
 class ProcExpr(object):
     def __init__(self, varnames, body):
         if type(varnames) is str: varnames = [varnames]
@@ -19,6 +21,7 @@ class CallExpr(object):
 
     def __repr__(self):
         return "<Call (%s) in %s" % (self.operator, ", ".join(map(repr, self.args)))
+
 
 class Expr(letlang.Expr):
     procexpr = Variant(ProcExpr, checker = "is_proc", constructor = "as_proc")
