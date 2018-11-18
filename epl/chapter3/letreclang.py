@@ -3,10 +3,10 @@ import typing
 from epl.unions import *
 from epl.chapter3 import proclang
 
-class NamedProcExpr(proclang.ProcExpr):
-    def __init__(self, name, varnames, body):
-        proclang.ProcExpr.__init__(self, varnames, body)
-        self.name = name
+def NamedProcExpr(name, varnames, body):
+    out = proclang.ProcExpr(varnames, body)
+    out.name = name
+    return out
 
 class LetRecExpr(object):
     """ To enable recursive procedures of the form:
@@ -17,6 +17,10 @@ class LetRecExpr(object):
         """ proc_map ::  : typing.Dict[str, (typing.List[str], "Expr")] """
         self.procs = {k: NamedProcExpr(k, v[0], v[1]) for k,v in proc_map.items()}
         self.body = body
+
+    def __eq__(self, another):
+        return self.procs == another.procs and \
+               self.body == another.body
 
 class Expr(proclang.Expr):
     letrec = Variant(LetRecExpr)

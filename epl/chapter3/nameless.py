@@ -44,6 +44,7 @@ class Expr(Union):
     number = Variant(letlang.Number)
     diff = Variant(letlang.DiffExpr)
     iszero = Variant(letlang.IsZeroExpr)
+    tupexpr = Variant(letlang.TupleExpr, checker = "is_tup", constructor = "as_tup")
     ifexpr = Variant(letlang.IfExpr, checker = "is_if", constructor = "as_if")
     callexpr = Variant(proclang.CallExpr, checker = "is_call", constructor = "as_call")
 
@@ -91,6 +92,11 @@ class NamelessTranslator(CaseMatcher):
         exp1 = self(diff.exp1, senv)
         exp2 = self(diff.exp2, senv)
         return Expr.as_diff(exp1, exp2)
+
+    @case("tupexpr")
+    def valueOfTupExpr(self, diff, senv):
+        values = [self(v,env) for v in tupexpr.children]
+        return TupleExpr(*values)
 
     @case("iszero")
     def valueOfIsZero(self, iszero, senv):

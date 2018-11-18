@@ -14,6 +14,7 @@ parser = Lark("""
             |   paren_expr
             |   number
             |   var_expr
+            |   tuple_expr
 
         number : NUMBER
 
@@ -21,9 +22,11 @@ parser = Lark("""
 
         varnames : VARNAME | VARNAME ( "," VARNAME ) *
         
+        tuple_expr : "(" expr ( "," expr ) + ")"
+
         paren_expr : "(" call_expr ")"
 
-        if_expr : IF call_expr THEN call_expr ELSE call_expr
+        if_expr : "if" call_expr "then" call_expr "else" call_expr
 
         proc_expr : "proc" "(" varnames ")" call_expr
 
@@ -36,9 +39,6 @@ parser = Lark("""
         letrec_mappings : letrec_mapping +
 
         NUMBER : /[0-9]+/
-        IF : "if"
-        THEN : "then"
-        ELSE : "else"
         VARNAME : /[a-zA-Z]+/
         // OPERATOR : ( "*" "-" "^" "/" "+" ">" "<" "$" "&" "?" )+
         // OPERATOR : /[*-^/+\\>\\<$&?]+/
@@ -91,6 +91,14 @@ class ASTTransformer(Transformer):
     def paren_expr(self, matches):
         self.assertIsExpr(matches, 1)
         return matches[0]
+
+    def tuple_expr(self, matches):
+        self.assertIsExpr(matches, -1)
+        return self.expr_class.as_tup(*matches)
+
+    def if_expr(self, matches):
+        self.assertIsExpr(matches, 3)
+        return self.expr_class.as_if(*matches)
 
 def parse(input, expr_class):
     tree = parser.parse(input)

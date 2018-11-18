@@ -8,16 +8,30 @@ from epl.chapter3 import letlang
 class ProcExpr(object):
     def __init__(self, varnames, body):
         if type(varnames) is str: varnames = [varnames]
+        self.name = None
         self.varnames = varnames
         self.body = body
 
+    def __eq__(self, another):
+        s1,s2 = set(self.varnames), set(another.varnames)
+        return s1 == s2 and self.name == another.name and \
+               self.body == another.body
+
     def __repr__(self):
-        return "<Proc(%s) { %s }" % (", ".self.varnames, repr(self.body))
+        if self.name:
+            return "<Proc(%s) { %s }" % (", ".self.varnames, repr(self.body))
+        else:
+            return "<Proc %s (%s) { %s }" % (self.name, ", ".self.varnames, repr(self.body))
 
 class CallExpr(object):
     def __init__(self, operator, *args):
         self.operator = operator
         self.args = list(args)
+
+    def __eq__(self, another):
+        return self.operator == another.operator and \
+               len(self.args) == len(another.args) and \
+               all(e1 == e2 for e1,e2 in zip(self.args, another.args))
 
     def __repr__(self):
         return "<Call (%s) in %s" % (self.operator, ", ".join(map(repr, self.args)))
