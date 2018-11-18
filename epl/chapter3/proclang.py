@@ -17,7 +17,7 @@ class ProcExpr(object):
 class CallExpr(object):
     def __init__(self, operator, *args):
         self.operator = operator
-        self.args = args
+        self.args = list(args)
 
     def __repr__(self):
         return "<Call (%s) in %s" % (self.operator, ", ".join(map(repr, self.args)))
