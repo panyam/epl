@@ -35,32 +35,19 @@ def test_parse_iszero():
         Expr.as_call(Expr.as_var("?"), Expr.as_number(0)))
 
 def test_parse_iszero_cust():
-    e = parse("isz ( ( ( 33 ) ) )")
-    assert e.is_call
-    callexpr, rator, rargs = e.callexpr, e.callexpr.operator, e.callexpr.args
-    assert rator.is_var and rator.var.name == "isz"
-    assert rargs[0].is_number and rargs[0].number.value == 33
+    e2 = Expr.as_call(Expr.as_var("isz"), Expr.as_number(33))
+    runtest("isz ( ( ( 33 ) ) )", e2)
 
 def test_parse_diff():
-    e = parse("- ( ( ( 33 ) ) ) 44")
-    assert e.is_call
-    callexpr, rator, rargs = e.callexpr, e.callexpr.operator, e.callexpr.args
-    assert rator.is_var and rator.var.name == "-"
-    assert rargs[0].is_number and rargs[0].number.value == 33
-    assert rargs[1].is_number and rargs[1].number.value == 44
+    e2 = Expr.as_call(Expr.as_var("-"), Expr.as_number(33), Expr.as_number(44))
+    runtest("- ( ( ( 33 ) ) ) 44", e2)
 
 def test_parse_tuple():
-    e = parse("- (3, 4)")
     e2 = Expr.as_call(Expr.as_var("-"),
                 Expr.as_tup(Expr.as_number(3), Expr.as_number(4)))
-    assert e == e2
+    runtest("- (3, 4)", e2)
 
 def test_parse_if():
-    e = parse("if isz 0 then 1 else 2")
-    assert e.is_if
-    cond,exp1,exp2 = e.ifexpr.cond,e.ifexpr.exp1,e.ifexpr.exp2
-    assert cond.is_call
-    assert cond.callexpr.operator.is_var and cond.callexpr.operator.var.name == "isz"
-    assert cond.callexpr.args[0].is_number and cond.callexpr.args[0].number.value == 0
-    assert exp1.is_number and exp1.number.value == 1
-    assert exp2.is_number and exp2.number.value == 2
+    e2 = Expr.as_if(Expr.as_call(Expr.as_var("isz"), Expr.as_number(0)),
+            Expr.as_number(1), Expr.as_number(2))
+    runtest("if isz 0 then 1 else 2", e2)
