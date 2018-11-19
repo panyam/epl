@@ -41,7 +41,7 @@ class CallExpr(object):
         yield 2, self.operator.printables()
         yield 1, "Args:"
         for arg in self.args:
-            yield 2, arg..printables()
+            yield 2, arg.printables()
 
     def __eq__(self, another):
         s1,s2 = set(self.varnames), set(another.varnames)

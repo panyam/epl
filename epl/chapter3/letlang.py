@@ -1,8 +1,6 @@
 
 from epl.unions import *
 
-def indent(l): return "  " * l
-
 class Number(object):
     def __init__(self, value):
         self.value = value
@@ -140,6 +138,9 @@ class Expr(Union):
     def __eq__(self, another):
         v1,v2 = self.variant_value, another.variant_value
         return type(v1) == type(v2) and v1 == v2
+
+    def printables(self):
+        yield 0, self.variant_value.printables()
 
 class Eval(CaseMatcher):
     # Tells which union type we are "case matching" on

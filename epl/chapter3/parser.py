@@ -13,10 +13,13 @@ parser = Lark("""
             |   num
             |   var_expr
             |   tuple_expr
+            |   op_expr
 
         !num : NUMBER | "-" NUMBER
 
-        var_expr : VARNAME | OPERATOR
+        op_expr : OPERATOR call_expr
+
+        var_expr : VARNAME // | OPERATOR
 
         varnames : VARNAME ( "," VARNAME ) *
         
@@ -36,10 +39,11 @@ parser = Lark("""
         letrec_mapping : VARNAME "(" varnames ")" "=" call_expr
         letrec_mappings : letrec_mapping +
 
-        call_expr : expr +
+        call_expr : expr | call_expr expr
 
         NUMBER : /[0-9]+/
         
+        // VARNAME : /[a-zA-Z]+/
         VARNAME : /(?!let|proc|if)[a-zA-Z]+/
         // OPERATOR : ( "*" "-" "^" "/" "+" ">" "<" "$" "&" "?" )+
         // OPERATOR : /[*-^/+\\>\\<$&?]+/
@@ -70,6 +74,9 @@ class ASTTransformer(Transformer):
 
     def call_expr(self, matches):
         self.assertIsExpr(matches, -1)
+        if len(matches) == 1:
+            return matches[0]
+
         mc = matches[:]
         if mc[0].is_var and mc[0].var.name in ("if", "proc"):
             set_trace()
@@ -104,6 +111,22 @@ class ASTTransformer(Transformer):
         token = matches[-1]
         assert token.type == 'NUMBER'
         return self.expr_class.as_num(int(token.value) * mult)
+
+    def op_expr(self, matches):
+        op, params = matches[0],matches[1:]
+        self.assertIsExpr(params, -1)
+        assert len(params) == 1
+        if op.value in self.optable:
+            if not params[0].is_tup:
+                set_trace()
+                assert params[0].is_tup
+            count,maker = self.optable[op.value]
+            # Ensure we have enough elems
+            return maker(params, self.expr_class)
+        else:
+            var = self.expr_class.as_var(op.value)
+            var.is_op = True
+            return self.expr_class.as_call(var, *params)
 
     def var_expr(self, matches):
         token = matches[0]
@@ -154,6 +177,8 @@ class ASTTransformer(Transformer):
                 self.expr_class.as_proc(
                     matches[1].children, matches[2]).procexpr)
 
-def parse(input, expr_class, optable):
+def parse(input, expr_class, optable, debug = False):
     tree = parser.parse(input)
-    return ASTTransformer(expr_class, optable).transform(tree)
+    if debug:
+        set_trace()
+    return ASTTransformer(expr_class, optable).transform(tree), tree

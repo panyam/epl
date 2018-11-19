@@ -22,7 +22,7 @@ class LetRecExpr(object):
 
     def printables(self):
         yield 0, "LetRec:"
-        for proc in self.procs:
+        for proc in self.procs.values():
             yield 2, "%s (%s) = " % (proc.name, ",".join(proc.varnames))
             yield 3, proc.body.printables()
         yield 1, "in:"
