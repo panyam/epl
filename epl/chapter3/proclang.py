@@ -12,6 +12,13 @@ class ProcExpr(object):
         self.varnames = varnames
         self.body = body
 
+    def printables(self):
+        if self.name:
+            yield 0, "Proc %s (%s) = " % (self.name, ", ".join(self.varnames))
+        else:
+            yield 0, "Proc (%s) = " % ", ".join(self.varnames)
+        yield 1, self.body.printables()
+
     def __eq__(self, another):
         s1,s2 = set(self.varnames), set(another.varnames)
         return s1 == s2 and self.name == another.name and \
@@ -19,19 +26,37 @@ class ProcExpr(object):
 
     def __repr__(self):
         if self.name:
-            return "<Proc(%s) { %s }" % (", ".self.varnames, repr(self.body))
+            return "<Proc %s (%s) { %s }" % (self.name, ", ".join(self.varnames), repr(self.body))
         else:
-            return "<Proc %s (%s) { %s }" % (self.name, ", ".self.varnames, repr(self.body))
+            return "<Proc(%s) { %s }" % (", ".join(self.varnames), repr(self.body))
 
 class CallExpr(object):
     def __init__(self, operator, *args):
         self.operator = operator
         self.args = list(args)
 
+    def printables(self):
+        yield 0, "Call"
+        yield 1, "Operator:"
+        yield 2, self.operator.printables()
+        yield 1, "Args:"
+        for arg in self.args:
+            yield 2, arg..printables()
+
     def __eq__(self, another):
-        return self.operator == another.operator and \
-               len(self.args) == len(another.args) and \
-               all(e1 == e2 for e1,e2 in zip(self.args, another.args))
+        s1,s2 = set(self.varnames), set(another.varnames)
+        return s1 == s2 and self.name == another.name and \
+               self.body == another.body
+
+    def __eq__(self, another):
+        if self.operator != another.operator:
+            return False
+        if len(self.args) != len(another.args):
+            return False
+        for e1,e2 in zip(self.args, another.args):
+            if e1 != e2:
+                return False
+        return True
 
     def __repr__(self):
         return "<Call (%s) in %s" % (self.operator, ", ".join(map(repr, self.args)))

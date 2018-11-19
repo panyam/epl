@@ -1,6 +1,8 @@
 
 from epl.unions import *
 
+def indent(l): return "  " * l
+
 class Number(object):
     def __init__(self, value):
         self.value = value
@@ -11,9 +13,15 @@ class Number(object):
     def __repr__(self):
         return "<Num(%d)>" % self.value
 
+    def printables(self):
+        yield 0, "num %d" % self.value
+
 class VarExpr(object):
     def __init__(self, name):
         self.name = name
+
+    def printables(self):
+        yield 0, "var %s" % self.name
 
     def __eq__(self, another):
         return self.name == another.name
@@ -25,9 +33,17 @@ class TupleExpr(object):
     def __init__(self, *children):
         self.children = list(children)
 
+    def printables(self):
+        yield 0, "Tuple:"
+        for c in self.children:
+            yield 1, c.printables()
+
     def __eq__(self, another):
-        return len(self.children) == len(another.children) and \
-                all(e1 == e2 for e1,e2 in zip(self.children, another.children))
+        if len(self.children) != len(another.children):
+            return False
+        for e1,e2 in zip(self.children, another.children):
+            if e1 != e2: return False
+        return True
 
     def __repr__(self):
         return "<Tuple(%s)>" % ", ".join(map(repr, self.children))
@@ -35,6 +51,10 @@ class TupleExpr(object):
 class IsZeroExpr(object):
     def __init__(self, expr):
         self.expr = expr
+
+    def printables(self):
+        yield 0, "IsZero:"
+        yield 1, self.expr.printables()
 
     def __repr__(self):
         return "<IsZero(%s)>" % str(self.expr)
@@ -47,9 +67,16 @@ class DiffExpr(object):
         self.exp1 = exp1
         self.exp2 = exp2
 
+    def printables(self):
+        yield 0, "Diff:"
+        yield 1, "Exp1"
+        yield 2, self.exp1.printables()
+        yield 1, "Exp2"
+        yield 2, self.exp2.printables()
+
     def __eq__(self, another):
-        return  self.exp1 == another.exp1 and \
-                self.exp2 == another.exp2
+        if self.exp1 != another.exp1: return False
+        return  self.exp2 == another.exp2
 
     def __repr__(self):
         return "<Diff(%s, %s)>" % (str(self.exp1), str(self.exp2))
@@ -59,6 +86,15 @@ class IfExpr(object):
         self.cond = cond
         self.exp1 = exp1
         self.exp2 = exp2
+
+    def printables(self):
+        yield 0, "If:"
+        yield 1, "Cond"
+        yield 2, self.cond.printables()
+        yield 1, "Then"
+        yield 2, self.exp1.printables()
+        yield 1, "Else"
+        yield 2, self.exp2.printables()
 
     def __eq__(self, another):
         return  self.cond == another.cond and \
@@ -73,6 +109,14 @@ class LetExpr(object):
         self.mappings = mappings
         self.body = body
 
+    def printables(self):
+        yield 0, "Let:"
+        for k,v in self.mappings.items():
+            yield 2, "%s = " % k
+            yield 3, v.printables()
+        yield 1, "in:"
+        yield 2, self.body.printables()
+
     def __eq__(self, another):
         return  len(self.mappings) == len(another.mappings) and \
                 all(k in another.mappings and 
@@ -85,7 +129,7 @@ class LetExpr(object):
 
 class Expr(Union):
     # Convert this into a union metaclass
-    number = Variant(Number)
+    num = Variant(Number)
     var = Variant(VarExpr)
     diff = Variant(DiffExpr)
     tupexpr = Variant(TupleExpr, checker = "is_tup", constructor = "as_tup")
@@ -109,9 +153,9 @@ class Eval(CaseMatcher):
         # func, child = self.select(expr)
         # return func(self, child, env)
 
-    @case("number")
-    def valueOfNumber(self, number, env = None):
-        return number.value
+    @case("num")
+    def valueOfNumber(self, num, env = None):
+        return num.value
 
     @case("var")
     def valueOfVar(self, var, env):

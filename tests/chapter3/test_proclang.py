@@ -7,7 +7,7 @@ from epl.common import DefaultEnv as Env
 Eval = proclang.Eval
 Expr = proclang.Expr
 as_let = Expr.as_let
-as_num = Expr.as_number
+as_num = Expr.as_num
 as_if = Expr.as_if
 as_diff = Expr.as_diff
 as_var = Expr.as_var

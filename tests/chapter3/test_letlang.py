@@ -5,7 +5,7 @@ from epl.common import DefaultEnv as Env
 
 Expr = letlang.Expr
 as_let = Expr.as_let
-as_num = Expr.as_number
+as_num = Expr.as_num
 as_if = Expr.as_if
 as_diff = Expr.as_diff
 as_var = Expr.as_var
@@ -28,8 +28,8 @@ _x = as_var("x")
 _y = as_var("y")
 _z = as_var("z")
 
-def test_number():
-    assert as_num(3).number.value == 3
+def test_num():
+    assert as_num(3).num.value == 3
 
 def test_var():
     assert as_var("x").var.name == "x"

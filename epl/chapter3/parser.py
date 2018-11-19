@@ -5,22 +5,20 @@ from lark import Lark, Transformer
 parser = Lark("""
         start : call_expr
 
-        call_expr : expr +
-
         expr:   if_expr
             |   proc_expr
             |   let_expr
             |   letrec_expr
             |   paren_expr
-            |   number
+            |   num
             |   var_expr
             |   tuple_expr
 
-        number : NUMBER
+        !num : NUMBER | "-" NUMBER
 
         var_expr : VARNAME | OPERATOR
 
-        varnames : VARNAME | VARNAME ( "," VARNAME ) *
+        varnames : VARNAME ( "," VARNAME ) *
         
         tuple_expr : "(" expr ( "," expr ) + ")"
 
@@ -35,11 +33,14 @@ parser = Lark("""
         let_mappings : let_mapping +
         
         letrec_expr : "letrec" letrec_mappings "in" call_expr
-        letrec_mapping : VARNAME "(" varnames ")" "=" call_expr "in" call_expr
+        letrec_mapping : VARNAME "(" varnames ")" "=" call_expr
         letrec_mappings : letrec_mapping +
 
+        call_expr : expr +
+
         NUMBER : /[0-9]+/
-        VARNAME : /[a-zA-Z]+/
+        
+        VARNAME : /(?!let|proc|if)[a-zA-Z]+/
         // OPERATOR : ( "*" "-" "^" "/" "+" ">" "<" "$" "&" "?" )+
         // OPERATOR : /[*-^/+\\>\\<$&?]+/
         OPERATOR : ( "*" | "-" | "^" | "/" | "+" | ">" | "<" | "$" | "&" | "?" )+
@@ -48,8 +49,9 @@ parser = Lark("""
     """)
 
 class ASTTransformer(Transformer):
-    def __init__(self,expr_class):
+    def __init__(self,expr_class, optable):
         self.expr_class = expr_class
+        self.optable = optable
 
     def isExp(self, e):
         return type(e) is self.expr_class
@@ -68,25 +70,47 @@ class ASTTransformer(Transformer):
 
     def call_expr(self, matches):
         self.assertIsExpr(matches, -1)
-        op = matches[0]
-        params = matches[1:]
-        if params:
-            return self.expr_class.as_call(op, *params)
-        return op
+        mc = matches[:]
+        if mc[0].is_var and mc[0].var.name in ("if", "proc"):
+            set_trace()
+        # Start from reverse and keep folding operators
+        # as they have a higher precedence
+        # TODO - apply proper operator precedence where required
+        for i in range(len(mc) - 1, -1, -1):
+            m = mc[i]
+            if m.is_var and m.var.name in self.optable:
+                count,maker = self.optable[m.var.name]
+                # Ensure we have enough elems
+                if (len(mc) - i) < (count + 1):
+                    set_trace()
+                    assert False
+                params = mc[i + 1:i + count + 1]
+                del mc[i + 1:i + count + 1]
+                mc[i] = maker(params, self.expr_class)
+
+        op,params = mc[0], mc[1:]
+        if not params:
+            return op
+        return self.expr_class.as_call(op, *params)
 
     def expr(self, matches):
         self.assertIsExpr(matches, 1)
         return matches[0]
 
-    def number(self, matches):
-        token = matches[0]
-        assert len(matches) == 1 and token.type == 'NUMBER'
-        return self.expr_class.as_number(int(matches[0].value))
+    def num(self, matches):
+        mult = 1
+        if len(matches) > 1:
+            mult = -1
+        token = matches[-1]
+        assert token.type == 'NUMBER'
+        return self.expr_class.as_num(int(token.value) * mult)
 
     def var_expr(self, matches):
         token = matches[0]
         assert len(matches) == 1 and token.type in ('VARNAME', 'OPERATOR')
-        return self.expr_class.as_var(matches[0].value)
+        out = self.expr_class.as_var(matches[0].value)
+        out.var.is_op = token.type == 'OPERATOR'
+        return out
     
     def paren_expr(self, matches):
         self.assertIsExpr(matches, 1)
@@ -96,10 +120,40 @@ class ASTTransformer(Transformer):
         self.assertIsExpr(matches, -1)
         return self.expr_class.as_tup(*matches)
 
+    def proc_expr(self, matches):
+        varnames = [x.value for x in matches[0].children]
+        return self.expr_class.as_proc(varnames, matches[1])
+
     def if_expr(self, matches):
         self.assertIsExpr(matches, 3)
         return self.expr_class.as_if(*matches)
 
-def parse(input, expr_class):
+    ### Let patterns
+    def let_expr(self, matches):
+        mappings = matches[0]
+        body = matches[1]
+        return self.expr_class.as_let(mappings, body)
+
+    def let_mappings(self, matches):
+        return dict(matches)
+
+    def let_mapping(self, matches):
+        return matches[0].value, matches[1]
+
+    ### Letrec patterns
+    def letrec_expr(self, matches):
+        mappings = matches[0]
+        body = matches[1]
+        return self.expr_class.as_letrec(mappings, body)
+
+    def letrec_mappings(self, matches):
+        return dict(matches)
+
+    def letrec_mapping(self, matches):
+        return (matches[0].value,
+                self.expr_class.as_proc(
+                    matches[1].children, matches[2]).procexpr)
+
+def parse(input, expr_class, optable):
     tree = parser.parse(input)
-    return ASTTransformer(expr_class).transform(tree)
+    return ASTTransformer(expr_class, optable).transform(tree)

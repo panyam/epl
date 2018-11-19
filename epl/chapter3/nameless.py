@@ -41,7 +41,7 @@ class NLetRecExpr(object):
         self.body = body
 
 class Expr(Union):
-    number = Variant(letlang.Number)
+    num = Variant(letlang.Number)
     diff = Variant(letlang.DiffExpr)
     iszero = Variant(letlang.IsZeroExpr)
     tupexpr = Variant(letlang.TupleExpr, checker = "is_tup", constructor = "as_tup")
@@ -83,9 +83,9 @@ class NamelessTranslator(CaseMatcher):
     """ Translates an expression with variables to a nameless one with depths (and indexes).  """
     __caseon__ = letreclang.Expr
 
-    @case("number")
-    def valueOfNumber(self, number, senv):
-        return Expr.as_number(number.value)
+    @case("num")
+    def valueOfNumber(self, num, senv):
+        return Expr.as_num(num.value)
 
     @case("diff")
     def valueOfDiff(self, diff, senv):
