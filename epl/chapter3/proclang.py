@@ -77,7 +77,6 @@ class Eval(letlang.Eval):
 
     @case("procexpr")
     def valueOfProc(self, procexpr, env):
-        # Create a Procedure value that captures the proc expression as well as the current environment!
         return BoundProc(procexpr, env)
 
     @case("callexpr")
@@ -88,8 +87,17 @@ class Eval(letlang.Eval):
 
     def apply_proc(self, boundproc, args):
         procexpr, saved_env = boundproc.procexpr, boundproc.env
-        assert len(procexpr.varnames) == len(args), "Currying not supported for now :)"
+
+        assert len(procexpr.varnames) >= len(args), "Too many args provided"
+
         newargs = dict(zip(procexpr.varnames, args))
         newenv = saved_env.extend(**newargs)
-        return self.valueOf(procexpr.body, newenv)
+        if len(procexpr.varnames) == len(args):
+            return self.valueOf(procexpr.body, newenv)
+
+        # Otherwise curry it!
+        arglen = len(args)
+        newvarnames = procexpr.varnames[arglen:]
+        newprocexpr = ProcExpr(newvarnames, procexpr.body)
+        return BoundProc(newprocexpr, newenv)
 

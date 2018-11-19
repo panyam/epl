@@ -97,12 +97,13 @@ class CaseMatcherMeta(type):
             if not caseon.hasvariant(matched_on):
                 raise Exception("Selected union (%s) type does not have variant being matched on (%s)." % (caseon, matched_on))
             x.__cases__[matched_on] = casefunc
-        if x.__cases__ and len(x.__cases__) != caseon.numvariants():
+
+        if caseon and len(x.__cases__) != caseon.numvariants():
             cases = set(x.__cases__.keys())
             variants = set(f for f,_ in caseon.__variants__)
             diff = variants - cases
             if diff:
-                raise Exception("Variants in union (%s) unmatched in CaseMatcher(%s): [%s]" % (caseon, name, ", ".join(diff)))
+                raise Exception("Variants in union (%s) unmatched in CaseMatcher(%s.%s): [%s]" % (caseon, caseon.__module__, caseon.__name__, ", ".join(diff)))
         return x
 
 class CaseMatcher(metaclass = CaseMatcherMeta):

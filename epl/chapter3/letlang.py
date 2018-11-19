@@ -133,7 +133,7 @@ class Expr(Union):
     tupexpr = Variant(TupleExpr, checker = "is_tup", constructor = "as_tup")
     iszero = Variant(IsZeroExpr)
     ifexpr = Variant(IfExpr, checker = "is_if", constructor = "as_if")
-    letexpr = Variant(LetExpr, checker = "is_let", constructor = "as_let")
+    let = Variant(LetExpr, checker = "is_let", constructor = "as_let")
 
     def __eq__(self, another):
         v1,v2 = self.variant_value, another.variant_value
@@ -182,9 +182,9 @@ class Eval(CaseMatcher):
         result = self.valueOf(ifexpr.cond, env)
         return self.valueOf(ifexpr.exp1 if result else ifexpr.exp2, env)
 
-    @case("letexpr")
-    def valueOfLet(self, letexpr, env):
-        expvals = {var: self.valueOf(exp, env) for var,exp in letexpr.mappings.items()}
+    @case("let")
+    def valueOfLet(self, let, env):
+        expvals = {var: self.valueOf(exp, env) for var,exp in let.mappings.items()}
         newenv = env.extend(**expvals)
-        return self.valueOf(letexpr.body, newenv)
+        return self.valueOf(let.body, newenv)
 
