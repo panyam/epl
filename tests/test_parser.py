@@ -1,7 +1,7 @@
 
 from ipdb import set_trace
 from epl.utils import eprint
-from tests.chapter3.parserutils import parse
+from tests.parserutils import parse
 from epl.chapter3.letreclang import Expr
 
 def runtest(input, exp):

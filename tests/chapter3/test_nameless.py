@@ -3,7 +3,7 @@ from ipdb import set_trace
 from epl.chapter3 import letreclang
 from epl.chapter3 import nameless
 from epl.common import DefaultEnv as Env
-from tests.chapter3.parserutils import parse
+from tests.parserutils import parse
 
 Expr = letreclang.Expr
 Eval = letreclang.Eval
