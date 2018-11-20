@@ -47,4 +47,3 @@ class Eval(proclang.Eval):
         for proc in letrec.procs.values():
             newenv.setone(proc.name, proclang.BoundProc(proc, newenv))
         return self.valueOf(letrec.body, newenv)
-

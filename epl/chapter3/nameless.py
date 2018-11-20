@@ -81,87 +81,96 @@ class NExpr(Union):
     nletrec = Variant(NLetRecExpr)
     nprocexpr = Variant(NProcExpr, checker = "is_nproc", constructor = "as_nproc")
 
-class NamelessTranslator(CaseMatcher):
+class Translator(CaseMatcher):
     """ Translates an expression with variables to a nameless one with depths (and indexes).  """
     __caseon__ = letreclang.Expr
 
     class StaticEnv(object):
         """ A static environment used in the translation of a named program to its nameless counterpart. """
-        def __init__(self, parent = None):
-            self.depth = 0 if not parent else parent.depth + 1
-            self.nvars = []
+        def __init__(self):
+            self.nvars_stack = [[]]
 
-        def push(self):
-            return StaticEnv(self)
+        def push(self, *varnames):
+            self.nvars_stack.insert(0, [])
+            for varname in varnames: self.register(varname)
+
+        def pop(self):
+            self.nvars_stack.pop(0)
 
         def nvar_for(self, name):
-            for vname,nvar in self.nvars:
-                if vname == name:
-                    return nvar
+            for depth,nvars in enumerate(self.nvars_stack):
+                for index,vname in enumerate(nvars):
+                    if vname == name:
+                        return depth,index
             return None
 
-        def register(self, var):
-            assert nvar_for(var.name) is None, "Var already exists in this scope.  Push first?"
-            
-            nvar = NVar(self.depth, len(self.nvars))
-            self.nvars.append((var.name, nvar))
-            return nvar
+        def register(self, varname):
+            if varname in self.nvars_stack[0]:
+                assert False, "Var already exists in this scope.  Push first?"
+            self.nvars_stack[0].append(varname)
+
+    def translate(self, expr, senv = None):
+        senv = senv or Translator.StaticEnv()
+        return self(expr, senv)
 
     @case("num")
-    def valueOfNumber(self, num, senv):
-        return num
+    def translateNumber(self, num, senv):
+        return NExpr.as_num(num.value)
 
     @case("diff")
-    def valueOfDiff(self, diff, senv):
+    def translateDiff(self, diff, senv):
         exp1 = self(diff.exp1, senv)
         exp2 = self(diff.exp2, senv)
-        return Expr.as_diff(exp1, exp2)
+        return NExpr.as_diff(exp1, exp2)
 
     @case("tupexpr")
-    def valueOfTupExpr(self, diff, senv):
+    def translateTupExpr(self, diff, senv):
         values = [self(v,env) for v in tupexpr.children]
-        return TupleExpr(*values)
+        return NExpr.as_tup(*values)
 
     @case("iszero")
-    def valueOfIsZero(self, iszero, senv):
-        return Expr.as_iszero(self(iszero.expr, senv))
+    def translateIsZero(self, iszero, senv):
+        return NExpr.as_iszero(self(iszero.expr, senv))
 
     @case("ifexpr")
-    def valueOfIf(self, ifexpr, senv):
-        return Expr.as_if(self(ifexpr.exp1, senv), self(ifexpr.exp2, senv), self(ifexpr.exp3, senv))
+    def translateIf(self, ifexpr, senv):
+        return NExpr.as_if(self(ifexpr.exp1, senv), self(ifexpr.exp2, senv), self(ifexpr.exp3, senv))
 
     @case("var")
-    def valueOfVar(self, var, senv):
-        return env.register(var.name)
+    def translateVar(self, var, senv):
+        depth,index = senv.nvar_for(var.name)
+        return NExpr.as_nvar(depth,index)
 
     @case("let")
-    def valueOfLet(self, let, senv):
-        newvalues = [self(v,senv) for v in let.values]
-        newargs = let.mappings.keys()
-        newenv = senv.push()
-        map(newenv.register, let.mappings.keys())
-        newbody = self(let.body, newenv)
-        return Expr.as_nlet(newvalues, newbody)
+    def translateLet(self, let, senv):
+        keys = let.mappings.keys()
+        newvalues = [self(let.mappings[k], senv) for k in keys]
+
+        senv.push(*keys)
+        newbody = self(let.body, senv)
+        out = NExpr.as_nlet(newvalues, newbody)
+        senv.pop()
+        return out
 
     @case("letrec")
-    def valueOfLetRec(self, letrec, senv):
+    def translateLetRec(self, letrec, senv):
         set_trace()
         newvalues = [self(v,senv) for v in let.values]
         newargs = let.mappings.keys()
         newenv = senv.push()
         map(newenv.register, let.mappings.keys())
         newbody = self(let.body, newenv)
-        return Expr.as_nlet(newvalues, newbody)
+        return NExpr.as_nlet(newvalues, newbody)
 
     @case("procexpr")
-    def valueOfProc(self, procexpr, senv):
+    def translateProc(self, procexpr, senv):
         newenv = env.push()
         map(newenv.register, procexpr.varnames)
         newbody = self(body, newenv)
         return Expr.as_nproc(newbody)
 
     @case("callexpr")
-    def valueOfCall(self, callexpr, senv):
+    def translateCall(self, callexpr, senv):
         newbody = self(body, senv)
         newargs = [self(arg, senv) for arg in callexpr.args]
         return Expr.as_call(newbody, *newargs)
@@ -172,11 +181,36 @@ class Eval(CaseMatcher):
 
     class NEnv(object):
         """ A nameless environment used for evaluations. """
-        pass
+        def __init__(self, parent = None):
+            self.parent = parent
+            self.values = []
+
+        def get(self, nvar):
+            curr = self
+            i = 0
+            while i < nvar.depth and curr:
+                curr = curr.parent
+
+            if not curr: return None
+            return curr.values[nvar.index]
+
+        def push(self):
+            """ Create a new environment. """
+            return self.__class__(self)
+
+        def extend(self, *values):
+            """ Create a new nenv by extending this with new vals. """
+            out = self.push()
+            out.values.extend(values)
+            return out
+
+    def valueOf(self, nexpr, env = None):
+        env = env or Eval.NEnv()
+        return self(nexpr, env)
 
     @case("num")
     def valueOfNumber(self, num, env):
-        return num
+        return num.value
 
     @case("diff")
     def valueOfDiff(self, diff, env):
@@ -216,7 +250,7 @@ class Eval(CaseMatcher):
 
     def apply_proc(self, boundproc, args):
         procexpr, saved_env = boundproc.procexpr, boundproc.env
-        newenv = saved_env.extend(args)
+        newenv = saved_env.push.extend(args)
         return self(procexpr.body, newenv)
 
     @case("nlet")
@@ -227,10 +261,9 @@ class Eval(CaseMatcher):
 
     @case("nletrec")
     def valueOfLetRec(self, letrec, senv):
-        set_trace()
         newvalues = [self(v,senv) for v in let.values]
         newargs = let.mappings.keys()
         newenv = senv.push()
         map(newenv.register, let.mappings.keys())
         newbody = self(let.body, newenv)
-        return Expr.as_nlet(newvalues, newbody)
+        return Expr.as_nletrec(newvalues, newbody)
