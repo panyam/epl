@@ -13,9 +13,17 @@ parser = Lark("""
             |   num
             |   var_expr
             |   tuple_expr
+            |   iszero_expr
+            |   diff_expr
+            |   block_expr
             |   op_expr
 
         !num : NUMBER | "-" NUMBER
+
+        block_expr : "begin" call_expr ( ";" call_expr ) * "end"
+
+        iszero_expr : "isz" "(" call_expr ")"
+        diff_expr : "-" "(" call_expr "," call_expr ")"
 
         op_expr : OPERATOR call_expr
 
@@ -52,26 +60,8 @@ parser = Lark("""
         %ignore WS
     """)
 
-class ASTTransformer(Transformer):
-    def __init__(self,expr_class, optable):
-        self.expr_class = expr_class
-        self.optable = optable
-
-    def isExp(self, e):
-        return type(e) is self.expr_class
-
-    def assertIsExpr(self, matches, count = 1):
-        try:
-            assert count < 0 or len(matches) == count, "Expected %d exprs" % count
-            assert all(map(self.isExp, matches))
-        except Exception as e:
-            set_trace()
-            raise e
-
-    def start(self, matches):
-        self.assertIsExpr(matches)
-        return matches[0]
-
+class BasicMixin(object):
+    ### Call/Application expression
     def call_expr(self, matches):
         self.assertIsExpr(matches, -1)
         if len(matches) == 1:
@@ -112,6 +102,32 @@ class ASTTransformer(Transformer):
         assert token.type == 'NUMBER'
         return self.expr_class.as_num(int(token.value) * mult)
 
+    def var_expr(self, matches):
+        token = matches[0]
+        assert len(matches) == 1 and token.type in ('VARNAME', 'OPERATOR')
+        out = self.expr_class.as_var(matches[0].value)
+        out.var.is_op = token.type == 'OPERATOR'
+        return out
+    
+    def paren_expr(self, matches):
+        self.assertIsExpr(matches, 1)
+        return matches[0]
+
+    def tuple_expr(self, matches):
+        self.assertIsExpr(matches, -1)
+        return self.expr_class.as_tup(*matches)
+
+    def if_expr(self, matches):
+        self.assertIsExpr(matches, 3)
+        return self.expr_class.as_if(*matches)
+
+class ExtMixin(object):
+    def iszero_expr(self, matches):
+        return self.expr_class.as_iszero(matches[0])
+
+    def diff_expr(self, matches):
+        return self.expr_class.as_diff(matches[0], matches[1])
+
     def op_expr(self, matches):
         op, params = matches[0],matches[1:]
         self.assertIsExpr(params, -1)
@@ -128,30 +144,12 @@ class ASTTransformer(Transformer):
             var.is_op = True
             return self.expr_class.as_call(var, *params)
 
-    def var_expr(self, matches):
-        token = matches[0]
-        assert len(matches) == 1 and token.type in ('VARNAME', 'OPERATOR')
-        out = self.expr_class.as_var(matches[0].value)
-        out.var.is_op = token.type == 'OPERATOR'
-        return out
-    
-    def paren_expr(self, matches):
-        self.assertIsExpr(matches, 1)
-        return matches[0]
-
-    def tuple_expr(self, matches):
-        self.assertIsExpr(matches, -1)
-        return self.expr_class.as_tup(*matches)
-
+class ProcMixin(object):
     def proc_expr(self, matches):
         varnames = [x.value for x in matches[0].children]
         return self.expr_class.as_proc(varnames, matches[1])
 
-    def if_expr(self, matches):
-        self.assertIsExpr(matches, 3)
-        return self.expr_class.as_if(*matches)
-
-    ### Let patterns
+class LetMixin(object):
     def let_expr(self, matches):
         mappings = matches[0]
         body = matches[1]
@@ -163,7 +161,7 @@ class ASTTransformer(Transformer):
     def let_mapping(self, matches):
         return matches[0].value, matches[1]
 
-    ### Letrec patterns
+class LetRecMixin(object):
     def letrec_expr(self, matches):
         mappings = matches[0]
         body = matches[1]
@@ -176,6 +174,49 @@ class ASTTransformer(Transformer):
         return (matches[0].value,
                 self.expr_class.as_proc(
                     matches[1].children, matches[2]).procexpr)
+
+class RefMixin(object):
+    def block_expr(self, matches):
+        self.assertIsExpr(matches)
+        return self.expr_class.as_block(matches)
+
+    def ref_expr(self, matches):
+        self.assertIsExpr(matches)
+        set_trace()
+        return matches[0]
+
+    def newref_expr(self, matches):
+        self.assertIsExpr(matches)
+        set_trace()
+        return self.expr_class.as_newref(matches[1])
+
+    def deref_expr(self, matches):
+        set_trace()
+        return self.expr_class.as_deref(matches[1])
+
+    def setref_expr(self, matches):
+        set_trace()
+        return self.expr_class.as_setref(matches[1], matches[2])
+
+class ASTTransformer(Transformer, BasicMixin, LetMixin, ProcMixin, LetRecMixin, ExtMixin, RefMixin):
+    def __init__(self,expr_class, optable):
+        self.expr_class = expr_class
+        self.optable = optable
+
+    def isExp(self, e):
+        return type(e) is self.expr_class
+
+    def assertIsExpr(self, matches, count = -1):
+        try:
+            assert count < 0 or len(matches) == count, "Expected %d exprs" % count
+            assert all(map(self.isExp, matches))
+        except Exception as e:
+            set_trace()
+            raise e
+
+    def start(self, matches):
+        self.assertIsExpr(matches, 1)
+        return matches[0]
 
 def parse(input, expr_class, optable, debug = False):
     tree = parser.parse(input)

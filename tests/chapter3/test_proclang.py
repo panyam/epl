@@ -3,7 +3,7 @@ from ipdb import set_trace
 from epl.utils import eprint
 from epl.chapter3 import proclang
 from epl.common import DefaultEnv as Env
-from tests.parserutils import parse
+from tests.parser.utils import parse
 
 Expr = proclang.Expr
 Eval = proclang.Eval

@@ -2,7 +2,7 @@
 from ipdb import set_trace
 from epl.chapter3 import letlang
 from epl.common import DefaultEnv as Env
-from tests.parserutils import parse
+from tests.parser.utils import parse
 
 Expr = letlang.Expr
 Eval = letlang.Eval
