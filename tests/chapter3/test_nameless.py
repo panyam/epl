@@ -11,14 +11,9 @@ NExpr = nameless.Eval
 NEval = nameless.Eval
 NTrans = nameless.Translator
 
-def runtest(input, exp, env = None):
-    env = env or Env()
-    expr,tree = parse(input)
-    assert Eval().valueOf(expr, env) == exp
-
 def runtest(input, value, env = None):
     env = env or Env()
-    expr,tree = parse(input)
+    expr,tree = parse(input, Expr)
     v1 = Eval().valueOf(expr, env)
     assert v1 == value
 

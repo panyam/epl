@@ -10,7 +10,7 @@ Eval = letreclang.Eval
 
 def runtest(input, exp, env = None):
     env = env or Env()
-    expr,tree = parse(input)
+    expr,tree = parse(input, Expr)
     assert Eval().valueOf(expr, env) == exp
 
 def test_double():

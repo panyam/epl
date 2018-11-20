@@ -1,12 +1,8 @@
 
 from ipdb import set_trace
-from epl.chapter3 import parser
-from epl.chapter3 import letreclang
-
-Expr = letreclang.Expr
+from epl import parser
 
 # "Custom" functions are just "calls" as macros!!!
-
 def isz_maker(params, Expr):
     # we need atleast 1 arg
     assert len(params) >= 1
@@ -25,5 +21,5 @@ optable = {
     "-": (1, diff_maker)
 }
 
-def parse(input):
+def parse(input, Expr):
     return parser.parse(input, Expr, optable)
