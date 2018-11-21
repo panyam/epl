@@ -50,3 +50,15 @@ def test_counter():
     """
     runtest(input, -1)
 
+def test_recproc():
+    input = """
+        let times4 = 0 in
+            begin
+                set times4 = proc(x)
+                                if isz(x)
+                                then 0
+                            else -((times4 -(x,1)), -4) ;
+                (times4 3)
+            end
+    """
+    runtest(input, 12)

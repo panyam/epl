@@ -59,7 +59,7 @@ parser = Lark("""
         NUMBER : /[0-9]+/
         
         // VARNAME : /[a-zA-Z]+/
-        VARNAME : /(?!set|letrec|setref|newref|deref|begin|end|let|proc|if)[a-zA-Z]+/
+        VARNAME : /(?!set|letrec|setref|newref|deref|begin|end|let|proc|if)[_a-zA-Z][_a-zA-Z0-9]*/
         // OPERATOR : ( "*" "-" "^" "/" "+" ">" "<" "$" "&" "?" )+
         // OPERATOR : /[*-^/+\\>\\<$&?]+/
         OPERATOR : ( "*" | "-" | "^" | "/" | "+" | ">" | "<" | "$" | "&" | "?" )+
