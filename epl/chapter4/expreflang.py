@@ -64,18 +64,35 @@ class Expr(letreclang.Expr):
 class Eval(letreclang.Eval):
     __caseon__ = Expr
 
+    def valueOf(self, expr, env):
+        return self(expr, env)
+
     @case("newref")
-    def valueOfNewRef(self, newref, env):
-        assert False
+    def valueOfNewRef(self, ref, env):
+        # evaluate ref value if it is an Expr
+        if type(ref.expr) is self.__caseon__:
+            ref.expr = self.valueOf(ref.expr, env)
+        # Return the ref cell as is - upto caller to use 
+        # this reference and the value in it as it sees fit
+        return ref
 
     @case("deref")
     def valueOfDeRef(self, deref, env):
-        assert False
+        ref = self(deref.expr, env)
+        assert type(ref) is NewRefExpr
+        return ref.expr
 
     @case("setref")
     def valueOfSetRef(self, setref, env):
-        assert False
+        val1 = self(setref.ref, env)
+        val2 = self(setref.value, env)
+        assert type(val1) is NewRefExpr
+        val1.expr = val2
+        return val2
 
     @case("block")
     def valueOfBlock(self, block, env):
-        assert False
+        value = self.__caseon__.as_num(0)
+        for expr in block.exprs:
+            value = self(expr, env)
+        return value

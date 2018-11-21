@@ -87,17 +87,22 @@ class Eval(letlang.Eval):
 
     def apply_proc(self, boundproc, args):
         procexpr, saved_env = boundproc.procexpr, boundproc.env
+        nargs = len(procexpr.varnames)
+        arglen = len(args)
 
-        assert len(procexpr.varnames) >= len(args), "Too many args provided"
+        assert nargs > 0, "Called entry is *not* a function"
 
         newargs = dict(zip(procexpr.varnames, args))
         newenv = saved_env.extend(**newargs)
-        if len(procexpr.varnames) == len(args):
+        if nargs == arglen:
             return self.valueOf(procexpr.body, newenv)
-
-        # Otherwise curry it!
-        arglen = len(args)
-        newvarnames = procexpr.varnames[arglen:]
-        newprocexpr = ProcExpr(newvarnames, procexpr.body)
-        return BoundProc(newprocexpr, newenv)
+        elif nargs > arglen:
+            # time to curry
+            newvarnames = procexpr.varnames[arglen:]
+            newprocexpr = ProcExpr(newvarnames, procexpr.body)
+            return BoundProc(newprocexpr, newenv)
+        else:   # nargs < arglen
+            # Only take what we need and return rest as a call expr
+            newexpr = self.valueOf(procexpr.body, newenv)
+            return self.apply_proc(newexpr, args[nargs:])
 
