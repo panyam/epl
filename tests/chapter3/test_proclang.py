@@ -33,3 +33,18 @@ def test_multiargs():
             -((f 1 10), (f 10 5))
     """
     runtest(input, -14)
+
+def test_currying2():
+    input = """ let f = proc(x,y) -(x,y) in ((f 5) 3) """
+    runtest(input, 2)
+
+def test_currying3():
+    input = """
+        let f = proc(x,y)
+                if (isz x)
+                then 0
+                else proc(a,b) +(a,b,x,y)
+        in
+        (f 1 2 3 4 5 6)
+    """
+    runtest(input, 2)

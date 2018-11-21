@@ -2,6 +2,8 @@
 from ipdb import set_trace
 from lark import Lark, Transformer
 
+reserved_words = ["set", "letrec", "ref", "setref", "newref", "deref", "begin", "end", "let", "proc", "if"]
+
 parser = Lark("""
         start : call_expr
 
@@ -22,7 +24,8 @@ parser = Lark("""
         !num : NUMBER | "-" NUMBER
 
         block_expr : "begin" call_expr ( ";" call_expr ) * "end"
-        ref_expr : newref_expr | setref_expr | deref_expr | assign_expr
+        ref_expr : refvar_expr | newref_expr | setref_expr | deref_expr | assign_expr
+        refvar_expr : "ref" VARNAME
         newref_expr : "newref" "(" call_expr ")"
         deref_expr : "deref" "(" call_expr ")"
         setref_expr : "setref" "(" call_expr "," call_expr ")"
@@ -59,13 +62,13 @@ parser = Lark("""
         NUMBER : /[0-9]+/
         
         // VARNAME : /[a-zA-Z]+/
-        VARNAME : /(?!set|letrec|setref|newref|deref|begin|end|let|proc|if)[_a-zA-Z][_a-zA-Z0-9]*/
+        VARNAME : /(?!{reserved_words})[_a-zA-Z][_a-zA-Z0-9]*/
         // OPERATOR : ( "*" "-" "^" "/" "+" ">" "<" "$" "&" "?" )+
         // OPERATOR : /[*-^/+\\>\\<$&?]+/
         OPERATOR : ( "*" | "-" | "^" | "/" | "+" | ">" | "<" | "$" | "&" | "?" )+
         %import common.WS
         %ignore WS
-    """)
+    """.format(reserved_words = "|".join(reserved_words)))
 
 class BasicMixin(object):
     ### Call/Application expression
@@ -191,9 +194,12 @@ class RefMixin(object):
         self.assertIsExpr(matches)
         return matches[0]
 
+    def refvar_expr(self, matches):
+        return self.expr_class.as_ref(matches[0].value)
+
     def newref_expr(self, matches):
         self.assertIsExpr(matches)
-        return self.expr_class.as_newref(matches[0])
+        return self.expr_class.as_ref(matches[0])
 
     def deref_expr(self, matches):
         self.assertIsExpr(matches)

@@ -18,7 +18,7 @@ def test_parse_paren():
     runtest("( ( ( 666 )) )", Expr.as_num(666))
 
 def test_operators():
-    runtest("+ (x, y)", Expr.as_call(Expr.as_var("+"),
+    runtest("/ (x, y)", Expr.as_call(Expr.as_var("/"),
             Expr.as_tup(Expr.as_var("x"), Expr.as_var("y"))))
     runtest(">>(x,y)", Expr.as_call(Expr.as_var(">>"),
             Expr.as_tup(Expr.as_var("x"), Expr.as_var("y"))))
@@ -36,9 +36,9 @@ def test_parse_diff():
     runtest("- ( 33, 44)", e2)
 
 def test_parse_tuple():
-    e2 = Expr.as_call(Expr.as_var("+"),
+    e2 = Expr.as_call(Expr.as_var("/"),
                 Expr.as_tup(Expr.as_num(3), Expr.as_num(4)))
-    runtest("+ (3, 4)", e2)
+    runtest("/ (3, 4)", e2)
 
 def test_parse_letrec_double():
     e2 = Expr.as_letrec({

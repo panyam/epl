@@ -12,8 +12,14 @@ def assert_tuplen(params, n):
     assert len(params) >= 1
     assert params[0].is_tup
     children = params[0].tupexpr.children
-    assert len(children) == n
+    if n > 0:
+        assert len(children) == n
     return children
+
+def plus_maker(params, Expr):
+    # we need atleast 2 args
+    children = assert_tuplen(params, -1)
+    return Expr.as_plus(children)
 
 def diff_maker(params, Expr):
     # we need atleast 2 args
@@ -35,6 +41,7 @@ def newref_maker(params, Expr):
 optable = {
     "isz": (1, isz_maker),
     "-": (1, diff_maker),
+    "+": (1, plus_maker),
     "setref": (1, setref_maker),
     "deref": (1, deref_maker),
     "newref": (1, newref_maker)

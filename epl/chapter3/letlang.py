@@ -60,6 +60,21 @@ class IsZeroExpr(object):
     def __eq__(self, another):
         return self.expr == another.expr
 
+class PlusExpr(object):
+    def __init__(self, exprs):
+        self.exprs = exprs
+
+    def printables(self):
+        yield 0, "Plus:"
+        for e in self.exprs:
+            yield 1, e.printables()
+
+    def __eq__(self, another):
+        return self.exprs == another.exprs
+
+    def __repr__(self):
+        return "<Plus(%s)>" % ",".join(map(repr, self.exprs))
+
 class DiffExpr(object):
     def __init__(self, exp1, exp2):
         self.exp1 = exp1
@@ -129,6 +144,7 @@ class Expr(Union):
     # Convert this into a union metaclass
     num = Variant(Number)
     var = Variant(VarExpr)
+    plus = Variant(PlusExpr)
     diff = Variant(DiffExpr)
     tupexpr = Variant(TupleExpr, checker = "is_tup", constructor = "as_tup")
     iszero = Variant(IsZeroExpr)
@@ -161,6 +177,10 @@ class Eval(CaseMatcher):
     @case("var")
     def valueOfVar(self, var, env):
         return env.get(var.name)
+
+    @case("plus")
+    def valueOfPlus(self, plus, env):
+        return sum((self.valueOf(e, env) for e in plus.exprs))
 
     @case("diff")
     def valueOfDiff(self, diff, env):

@@ -3,13 +3,17 @@ import typing
 from epl.unions import *
 from epl.chapter3 import letreclang
 
-class NewRefExpr(object):
-    """ Creates a new reference. """
-    def __init__(self, expr):
-        self.expr = expr
+class RefExpr(object):
+    """ This expression both captures a reference to a cell as well as a reference to a variable. """
+    def __init__(self, expr_or_var):
+        self.expr = expr_or_var
+
+    @property
+    def is_var(self):
+        return type(self.expr) is str
 
     def printables(self):
-        yield 0, "NewRef:"
+        yield 0, "Ref:"
         yield 1, self.expr.printables()
 
     def __eq__(self, another):
@@ -56,7 +60,7 @@ class BlockExpr(object):
         return self.exprs == another.exprs
 
 class Expr(letreclang.Expr):
-    newref = Variant(NewRefExpr)
+    ref = Variant(RefExpr)
     deref = Variant(DeRefExpr)
     setref = Variant(SetRefExpr)
     block = Variant(BlockExpr)
@@ -67,26 +71,32 @@ class Eval(letreclang.Eval):
     def valueOf(self, expr, env):
         return self(expr, env)
 
-    @case("newref")
-    def valueOfNewRef(self, ref, env):
-        # evaluate ref value if it is an Expr
-        if type(ref.expr) is self.__caseon__:
-            ref.expr = self.valueOf(ref.expr, env)
-        # Return the ref cell as is - upto caller to use 
-        # this reference and the value in it as it sees fit
-        return ref
+    @case("ref")
+    def valueOfRef(self, ref, env):
+        # evaluate ref value if it is an Expr only
+        # otherwise we could have a value or a variable (in which case it is a ref to a var)
+        if not ref.is_var:
+            return self.__caseon__.as_ref(self.valueOf(ref.expr, env)).ref
+        else:
+            # Return the ref cell as is - upto caller to use 
+            # this reference and the value in it as it sees fit
+            set_trace()
+            return ref
 
     @case("deref")
     def valueOfDeRef(self, deref, env):
         ref = self(deref.expr, env)
-        assert type(ref) is NewRefExpr
+        assert type(ref) is RefExpr
         return ref.expr
 
     @case("setref")
     def valueOfSetRef(self, setref, env):
         val1 = self(setref.ref, env)
+        if type(val1) is not RefExpr:
+            set_trace()
+        assert type(val1) is RefExpr
+
         val2 = self(setref.value, env)
-        assert type(val1) is NewRefExpr
         val1.expr = val2
         return val2
 

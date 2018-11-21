@@ -1,5 +1,4 @@
 
-
 from ipdb import set_trace
 from epl.utils import eprint
 from epl.chapter4 import impreflang
@@ -62,3 +61,18 @@ def test_recproc():
             end
     """
     runtest(input, 12)
+
+def _test_callbyref():
+    input = """
+        let a = 3
+        in let b = 4
+            in let swap = proc(x,y)
+                            let temp = deref(x)
+                            in begin
+                                setref(x, deref(y));
+                                setref(y,temp)
+                            end
+                in begin ((swap ref a) ref b) ; -(a,b) end
+    """
+    runtest(input, 12)
+

@@ -69,6 +69,7 @@ class NLetRecExpr(object):
 
 class NExpr(Union):
     num = Variant(letlang.Number)
+    plus = Variant(letlang.PlusExpr)
     diff = Variant(letlang.DiffExpr)
     iszero = Variant(letlang.IsZeroExpr)
     tupexpr = Variant(letlang.TupleExpr, checker = "is_tup", constructor = "as_tup")
@@ -116,6 +117,11 @@ class Translator(CaseMatcher):
     @case("num")
     def translateNumber(self, num, senv):
         return NExpr.as_num(num.value)
+
+    @case("plus")
+    def translatePlus(self, plus, senv):
+        exprs = [self(e, senv) for e in plus.exprs]
+        return NExpr.as_plus(exprs)
 
     @case("diff")
     def translateDiff(self, diff, senv):
@@ -211,6 +217,10 @@ class Eval(CaseMatcher):
     @case("num")
     def valueOfNumber(self, num, env):
         return num.value
+
+    @case("plus")
+    def valueOfPlus(self, plus, env):
+        return sum((self(e, env) for e in plus.exprs))
 
     @case("diff")
     def valueOfDiff(self, diff, env):
