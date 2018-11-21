@@ -16,11 +16,16 @@ parser = Lark("""
             |   iszero_expr
             |   diff_expr
             |   block_expr
+            |   ref_expr
             |   op_expr
 
         !num : NUMBER | "-" NUMBER
 
         block_expr : "begin" call_expr ( ";" call_expr ) * "end"
+        ref_expr : newref_expr | setref_expr | deref_expr
+        newref_expr : "newref" "(" call_expr ")"
+        deref_expr : "deref" "(" call_expr ")"
+        setref_expr : "setref" "(" call_expr "," call_expr ")"
 
         iszero_expr : "isz" "(" call_expr ")"
         diff_expr : "-" "(" call_expr "," call_expr ")"
@@ -52,7 +57,7 @@ parser = Lark("""
         NUMBER : /[0-9]+/
         
         // VARNAME : /[a-zA-Z]+/
-        VARNAME : /(?!let|proc|if)[a-zA-Z]+/
+        VARNAME : /(?!letrec|setref|newref|deref|begin|end|let|proc|if)[a-zA-Z]+/
         // OPERATOR : ( "*" "-" "^" "/" "+" ">" "<" "$" "&" "?" )+
         // OPERATOR : /[*-^/+\\>\\<$&?]+/
         OPERATOR : ( "*" | "-" | "^" | "/" | "+" | ">" | "<" | "$" | "&" | "?" )+
@@ -182,21 +187,19 @@ class RefMixin(object):
 
     def ref_expr(self, matches):
         self.assertIsExpr(matches)
-        set_trace()
         return matches[0]
 
     def newref_expr(self, matches):
         self.assertIsExpr(matches)
-        set_trace()
-        return self.expr_class.as_newref(matches[1])
+        return self.expr_class.as_newref(matches[0])
 
     def deref_expr(self, matches):
-        set_trace()
-        return self.expr_class.as_deref(matches[1])
+        self.assertIsExpr(matches)
+        return self.expr_class.as_deref(matches[0])
 
     def setref_expr(self, matches):
-        set_trace()
-        return self.expr_class.as_setref(matches[1], matches[2])
+        self.assertIsExpr(matches)
+        return self.expr_class.as_setref(matches[0], matches[1])
 
 class ASTTransformer(Transformer, BasicMixin, LetMixin, ProcMixin, LetRecMixin, ExtMixin, RefMixin):
     def __init__(self,expr_class, optable):
