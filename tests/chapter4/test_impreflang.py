@@ -1,12 +1,13 @@
 
+
 from ipdb import set_trace
 from epl.utils import eprint
-from epl.chapter4 import expreflang
+from epl.chapter4 import impreflang
 from epl.common import DefaultEnv as Env
 from tests.parser.utils import parse
 
-Expr = expreflang.Expr
-Eval = expreflang.Eval
+Expr = impreflang.Expr
+Eval = impreflang.Eval
 
 def runtest(input, exp, env = None):
     env = env or Env()
@@ -15,33 +16,33 @@ def runtest(input, exp, env = None):
 
 def test_oddeven():
     input = """
-    let x = newref(0) in
+    let x = 0 in
         letrec
             even(dummy)
-                = if isz(deref(x))
+                = if isz(x)
                   then 1
                   else begin
-                    setref(x, -(deref(x), 1));
+                    set x = -(x,1) ;
                     (odd 888)
                   end
             odd(dummy)
-                = if isz(deref(x))
+                = if isz(x)
                   then 0
                   else begin
-                    setref(x, -(deref(x), 1));
+                    set x = -(x,1) ;
                     (even 888)
                   end
-        in begin setref(x, 13) ; (odd 888) end
+        in begin set x = 13 ; (odd 888) end
     """
     runtest(input, True)
 
 def test_counter():
     input = """
-        let g = let counter = newref(0)
+        let g = let counter = 0
                 in proc(dummy)
                     begin
-                        setref(counter, -(deref(counter), -1)) ;
-                        deref(counter)
+                        set counter = -(counter, -1) ;
+                        counter
                     end
         in let a = (g 11)
             in let b = (g 11)
