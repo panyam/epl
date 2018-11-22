@@ -6,11 +6,20 @@ from epl.chapter3 import letlang
 ## Constructs for Procedures 
 
 class ProcExpr(object):
+    class BoundProc(object):
+        """ A procedure bound to an environment. """
+        def __init__(self, proc, env):
+            self.procexpr = proc
+            self.env = env
+
     def __init__(self, varnames, body):
         if type(varnames) is str: varnames = [varnames]
         self.name = None
         self.varnames = varnames
         self.body = body
+
+    def bind(self, env):
+        return ProcExpr.BoundProc(self, env)
 
     def printables(self):
         if self.name:
@@ -66,18 +75,12 @@ class Expr(letlang.Expr):
     procexpr = Variant(ProcExpr, checker = "is_proc", constructor = "as_proc")
     callexpr = Variant(CallExpr, checker = "is_call", constructor = "as_call")
 
-class BoundProc(object):
-    """ A procedure bound to an environment. """
-    def __init__(self, proc, env):
-        self.procexpr = proc
-        self.env = env
-
 class Eval(letlang.Eval):
     __caseon__ = Expr
 
     @case("procexpr")
     def valueOfProc(self, procexpr, env):
-        return BoundProc(procexpr, env)
+        return procexpr.bind(env)
 
     @case("callexpr")
     def valueOfCall(self, callexpr, env):
@@ -87,22 +90,33 @@ class Eval(letlang.Eval):
 
     def apply_proc(self, boundproc, args):
         procexpr, saved_env = boundproc.procexpr, boundproc.env
-        nargs = len(procexpr.varnames)
-        arglen = len(args)
+        curr_procexpr = procexpr
+        curr_env = saved_env
+        curr_args = args
 
-        assert nargs > 0, "Called entry is *not* a function"
+        while curr_args and curr_procexpr.varnames:
+            nargs = len(curr_procexpr.varnames)
+            arglen = len(curr_args)
 
-        newargs = dict(zip(procexpr.varnames, args))
-        newenv = saved_env.extend(**newargs)
-        if nargs == arglen:
-            return self.valueOf(procexpr.body, newenv)
-        elif nargs > arglen:
-            # time to curry
-            newvarnames = procexpr.varnames[arglen:]
-            newprocexpr = ProcExpr(newvarnames, procexpr.body)
-            return BoundProc(newprocexpr, newenv)
-        else:   # nargs < arglen
-            # Only take what we need and return rest as a call expr
-            newexpr = self.valueOf(procexpr.body, newenv)
-            return self.apply_proc(newexpr, args[nargs:])
+            curr_args,rest_args = curr_args[:nargs], curr_args[nargs:]
+            newargs = dict(zip(curr_procexpr.varnames, curr_args))
+            newenv = curr_env.extend(**newargs)
+            if nargs > arglen:  # Time to curry
+                left_varnames = curr_procexpr.varnames[arglen:]
+                newprocexpr = ProcExpr(left_varnames, curr_procexpr.body)
+                return newprocexpr.bind(newenv)
 
+            elif nargs == arglen:
+                return self.valueOf(curr_procexpr.body, newenv)
+            
+            else: # nargs < arglen
+                # Only take what we need and return rest as a call expr
+                curr_procexpr = self.valueOf(curr_procexpr, newenv)
+                # Should curr_env = newenv?
+                # return self.apply_proc(newexpr, args[nargs:])
+
+            # after all case
+            curr_args = rest_args
+
+        # Check atleast one application has happened
+        assert curr_procexpr != procexpr, "Called entry is *not* a function"

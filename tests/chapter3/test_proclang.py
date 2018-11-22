@@ -41,10 +41,11 @@ def test_currying2():
 def test_currying3():
     input = """
         let f = proc(x,y)
-                if (isz x)
-                then 0
-                else proc(a,b) +(a,b,x,y)
+                if (isz y)
+                then x
+                else proc(a,b) (if isz b then +(a,x,y) else +(a,b,x,y))
         in
-        (f 1 2 3 4 5 6)
+        (f 1 2 2 0)
     """
-    runtest(input, 2)
+    runtest(input, 5)
+

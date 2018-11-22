@@ -45,5 +45,5 @@ class Eval(proclang.Eval):
         # New env returns a BoundProc if var in letrec.boundvars
         newenv = env.push()
         for proc in letrec.procs.values():
-            newenv.setone(proc.name, proclang.BoundProc(proc, newenv))
+            newenv.setone(proc.name, proc.bind(newenv))
         return self.valueOf(letrec.body, newenv)
