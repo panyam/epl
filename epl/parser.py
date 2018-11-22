@@ -20,8 +20,11 @@ parser = Lark("""
             |   block_expr
             |   ref_expr
             |   op_expr
+            |   lazy_expr
 
         !num : NUMBER | "-" NUMBER
+
+        lazy_expr : "'" call_expr
 
         block_expr : "begin" call_expr ( ";" call_expr ) * "end"
         ref_expr : refvar_expr | newref_expr | setref_expr | deref_expr | assign_expr
@@ -130,6 +133,10 @@ class BasicMixin(object):
     def if_expr(self, matches):
         self.assertIsExpr(matches, 3)
         return self.expr_class.as_if(*matches)
+
+    def lazy_expr(self, matches):
+        self.assertIsExpr(matches)
+        return self.expr_class.as_lazy(*matches)
 
 class ExtMixin(object):
     def iszero_expr(self, matches):
