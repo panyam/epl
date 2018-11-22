@@ -29,12 +29,12 @@ def test_oddeven():
     """
     runtest(input, True)
 
-def _test_currying4():
+def test_currying4():
     input = """
         letrec f(x,y) = if (isz y)
                         then x
-                        else f +(x,y)
+                        else (f +(x,y))
         in
-        (f 1 2 3 4 0 2)
+        (f 1 2 3 4 5 0)
     """
-    runtest(input, 5)
+    runtest(input, 15)
