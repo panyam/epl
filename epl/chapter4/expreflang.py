@@ -80,24 +80,29 @@ class Eval(letreclang.Eval):
         else:
             # Return the ref cell as is - upto caller to use 
             # this reference and the value in it as it sees fit
-            set_trace()
             return ref
 
     @case("deref")
     def valueOfDeRef(self, deref, env):
         ref = self(deref.expr, env)
         assert type(ref) is RefExpr
-        return ref.expr
+        if ref.is_var:
+            # Then get the value of the named ref
+            return env.get(ref.expr)
+        else:
+            return ref.expr
 
     @case("setref")
     def valueOfSetRef(self, setref, env):
         val1 = self(setref.ref, env)
-        if type(val1) is not RefExpr:
-            set_trace()
         assert type(val1) is RefExpr
-
         val2 = self(setref.value, env)
-        val1.expr = val2
+        if val1.is_var:
+            # since a named ref get the ref by name first - we have an extra level of indirection here
+            env.replace(val1.expr, val2)
+        else:
+            # Set ref as is
+            val1.expr = val2
         return val2
 
     @case("block")

@@ -62,7 +62,7 @@ def test_recproc():
     """
     runtest(input, 12)
 
-def _test_callbyref():
+def test_callbyref():
     input = """
         let a = 3
         in let b = 4
@@ -74,5 +74,5 @@ def _test_callbyref():
                             end
                 in begin ((swap ref a) ref b) ; -(a,b) end
     """
-    runtest(input, 12)
+    runtest(input, 1)
 
