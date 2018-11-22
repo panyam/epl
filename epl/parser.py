@@ -2,7 +2,7 @@
 from ipdb import set_trace
 from lark import Lark, Transformer
 
-reserved_words = ["set", "letrec", "ref", "setref", "newref", "deref", "begin", "end", "let", "proc", "if"]
+reserved_words = ["set", "letrec", "ref", "setref", "newref", "deref", "begin", "end", "let", "proc", "if", "isz"]
 
 parser = Lark("""
         start : call_expr
@@ -16,7 +16,6 @@ parser = Lark("""
             |   var_expr
             |   tuple_expr
             |   iszero_expr
-            |   diff_expr
             |   block_expr
             |   ref_expr
             |   op_expr
@@ -35,12 +34,11 @@ parser = Lark("""
 
         assign_expr : "set" VARNAME "=" expr
 
-        iszero_expr : "isz" "(" call_expr ")"
-        diff_expr : "-" "(" call_expr "," call_expr ")"
+        iszero_expr : "isz" call_expr 
 
         op_expr : OPERATOR call_expr
 
-        var_expr : VARNAME // | OPERATOR
+        var_expr : VARNAME
 
         varnames : VARNAME ( "," VARNAME ) *
         
@@ -81,8 +79,6 @@ class BasicMixin(object):
             return matches[0]
 
         mc = matches[:]
-        if mc[0].is_var and mc[0].var.name in ("if", "proc"):
-            set_trace()
         # Start from reverse and keep folding operators
         # as they have a higher precedence
         # TODO - apply proper operator precedence where required
@@ -117,9 +113,8 @@ class BasicMixin(object):
 
     def var_expr(self, matches):
         token = matches[0]
-        assert len(matches) == 1 and token.type in ('VARNAME', 'OPERATOR')
+        assert len(matches) == 1 and token.type == 'VARNAME'
         out = self.expr_class.as_var(matches[0].value)
-        out.var.is_op = token.type == 'OPERATOR'
         return out
     
     def paren_expr(self, matches):
@@ -142,24 +137,12 @@ class ExtMixin(object):
     def iszero_expr(self, matches):
         return self.expr_class.as_iszero(matches[0])
 
-    def diff_expr(self, matches):
-        return self.expr_class.as_diff(matches[0], matches[1])
-
     def op_expr(self, matches):
-        op, params = matches[0],matches[1:]
-        self.assertIsExpr(params, -1)
-        assert len(params) == 1
-        if op.value in self.optable:
-            if not params[0].is_tup:
-                set_trace()
-                assert params[0].is_tup
-            count,maker = self.optable[op.value]
-            # Ensure we have enough elems
-            return maker(params, self.expr_class)
+        if matches[1].is_tup:
+            tupexpr = matches[1].tupexpr
+            return self.expr_class.as_opexpr(matches[0].value, tupexpr.children)
         else:
-            var = self.expr_class.as_var(op.value)
-            var.is_op = True
-            return self.expr_class.as_call(var, *params)
+            return self.expr_class.as_opexpr(matches[0].value, matches[1])
 
 class ProcMixin(object):
     def proc_expr(self, matches):
@@ -239,7 +222,8 @@ class ASTTransformer(Transformer, BasicMixin, LetMixin, ProcMixin, LetRecMixin, 
         self.assertIsExpr(matches, 1)
         return matches[0]
 
-def parse(input, expr_class, optable, debug = False):
+def parse(input, expr_class, optable = None, debug = False):
+    optable = optable or {}
     tree = parser.parse(input)
     if debug:
         set_trace()

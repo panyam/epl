@@ -1,35 +1,30 @@
 
 from ipdb import set_trace
 from epl.chapter3 import letlang
-from epl.common import DefaultEnv as Env
-from tests.parser.utils import parse
+from tests.utils import runevaltest
 
 Expr = letlang.Expr
 Eval = letlang.Eval
 
-def runtest(input, exp, env = None):
-    env = env or Env()
-    expr,tree = parse(input, Expr)
-    assert Eval().valueOf(expr, env) == exp
+def runtest(input, exp, **extra_env):
+    return runevaltest(Expr, Eval, input, exp, **extra_env)
 
 def test_num():
     runtest("""3""", 3)
 
 def test_var():
-    runtest("""x""", 5, Env().set(x = 5))
+    runtest("""x""", 5, x = 5)
 
 def test_zero():
     runtest("isz 0", True)
     runtest("isz 1", False)
 
 def test_diff():
-    env = Env().set(i = 1, v = 5, x = 10)
-    runtest("-(-(x,3),-(v,i))", 3, env)
+    runtest("-(-(x,3),-(v,i))", 3, i = 1, v = 5, x = 10)
 
 def test_if():
     input = " if isz -(x,11) then -(y,2) else -(y,4) "
-    env = Env().set(x = 33, y = 22)
-    runtest(input, 18, env)
+    runtest(input, 18, x = 33, y = 22)
 
 def test_let():
     input = "let x = 5 in -(x,3)"

@@ -2,16 +2,13 @@
 from ipdb import set_trace
 from epl.utils import eprint
 from epl.chapter3 import proclang
-from epl.common import DefaultEnv as Env
-from tests.parser.utils import parse
+from tests.utils import runevaltest
 
 Expr = proclang.Expr
 Eval = proclang.Eval
 
-def runtest(input, exp, env = None):
-    env = env or Env()
-    expr,tree = parse(input, Expr)
-    assert Eval().valueOf(expr, env) == exp
+def runtest(input, exp, **extra_env):
+    return runevaltest(Expr, Eval, input, exp, **extra_env)
 
 def test_basic():
     input = """ let f = proc (x) -(x,11) in (f (f 77)) """

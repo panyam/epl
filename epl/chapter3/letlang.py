@@ -60,39 +60,25 @@ class IsZeroExpr(object):
     def __eq__(self, another):
         return self.expr == another.expr
 
-class PlusExpr(object):
-    def __init__(self, exprs):
-        self.exprs = exprs
+class OpExpr(object):
+    def __init__(self, op, *exprs):
+        self.op = op
+        if exprs and len(exprs) == 1 and type(exprs[0]) is list:
+            self.exprs = exprs[0]
+        else:
+            self.exprs = list(exprs)
 
     def printables(self):
-        yield 0, "Plus:"
-        for e in self.exprs:
-            yield 1, e.printables()
+        yield 0, "Op (%s):", self.op
+        for exp in self.exprs:
+            yield 1, exp.printables()
 
     def __eq__(self, another):
-        return self.exprs == another.exprs
+        return self.op == another.op and \
+               self.exprs == another.exprs
 
     def __repr__(self):
-        return "<Plus(%s)>" % ",".join(map(repr, self.exprs))
-
-class DiffExpr(object):
-    def __init__(self, exp1, exp2):
-        self.exp1 = exp1
-        self.exp2 = exp2
-
-    def printables(self):
-        yield 0, "Diff:"
-        yield 1, "Exp1"
-        yield 2, self.exp1.printables()
-        yield 1, "Exp2"
-        yield 2, self.exp2.printables()
-
-    def __eq__(self, another):
-        if self.exp1 != another.exp1: return False
-        return  self.exp2 == another.exp2
-
-    def __repr__(self):
-        return "<Diff(%s, %s)>" % (str(self.exp1), str(self.exp2))
+        return "<Op(%s, [%s])>" % (self.op, ", ".join(map(repr, self.exprs)))
 
 class IfExpr(object):
     def __init__(self, cond, exp1, exp2):
@@ -144,12 +130,15 @@ class Expr(Union):
     # Convert this into a union metaclass
     num = Variant(Number)
     var = Variant(VarExpr)
-    plus = Variant(PlusExpr)
-    diff = Variant(DiffExpr)
+    opexpr = Variant(OpExpr)
     tupexpr = Variant(TupleExpr, checker = "is_tup", constructor = "as_tup")
     iszero = Variant(IsZeroExpr)
     ifexpr = Variant(IfExpr, checker = "is_if", constructor = "as_if")
     let = Variant(LetExpr, checker = "is_let", constructor = "as_let")
+
+    @classmethod
+    def as_diff(cls, e1, e2):
+        return cls.as_opexpr("-", e1, e2)
 
     def __eq__(self, another):
         v1,v2 = self.variant_value, another.variant_value
@@ -178,15 +167,13 @@ class Eval(CaseMatcher):
     def valueOfVar(self, var, env):
         return env.get(var.name)
 
-    @case("plus")
-    def valueOfPlus(self, plus, env):
-        return sum((self.valueOf(e, env) for e in plus.exprs))
-
-    @case("diff")
-    def valueOfDiff(self, diff, env):
-        val1 = self.valueOf(diff.exp1, env)
-        val2 = self.valueOf(diff.exp2, env)
-        return val1 - val2
+    @case("opexpr")
+    def valueOfOpExpr(self, opexpr, env):
+        # In this lang we make "op" expressions just hooks to external plugins
+        # We can get even more generic once we have procedures (proclang onwards)
+        opfunc = env.get(opexpr.op)
+        assert opfunc is not None, "No plug in found for operator: %s" % opexpr.op
+        return opfunc(self, env, opexpr.exprs)
 
     @case("tupexpr")
     def valueOfTUple(self, tupexpr, env):
