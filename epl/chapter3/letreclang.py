@@ -40,8 +40,6 @@ class Eval(proclang.Eval):
 
     @case("letrec")
     def valueOfLetRec(self, letrec, env):
-        # Create a Procedure value that captures the proc expression as well as the current environment!
-
         # New env returns a BoundProc if var in letrec.boundvars
         newenv = env.push()
         for proc in letrec.procs.values():

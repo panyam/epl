@@ -28,7 +28,7 @@ class Eval(expreflang.Eval):
         return self(expr, env)
 
     @case("assign")
-    def valueOfSetRef(self, assign, env):
+    def valueOfAssign(self, assign, env):
         val = self(assign.expr, env)
         env.replace(assign.varname, val)
         return val
