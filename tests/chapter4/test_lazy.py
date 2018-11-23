@@ -12,8 +12,8 @@ def runtest(input, exp, **extra_env):
 
 def test_lazy():
     input = """
-        letrec infiniteloop(x) = ' ( infiniteloop(x,1) )
+        letrec infinite-loop(x) = ' ( infinite-loop(x,1) )
             in let f = proc(z) 11
-                in (f (infiniteloop 0))
+                in (f (infinite-loop 0))
     """
     runtest(input, 11)

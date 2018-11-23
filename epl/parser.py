@@ -63,7 +63,7 @@ parser = Lark("""
         NUMBER : /[0-9]+/
         
         // VARNAME : /[a-zA-Z]+/
-        VARNAME : /(?!{reserved_words})[_a-zA-Z][_a-zA-Z0-9]*/
+        VARNAME : /(?!{reserved_words})[_a-zA-Z][_a-z\\-A-Z0-9]*/
         // OPERATOR : ( "*" "-" "^" "/" "+" ">" "<" "$" "&" "?" )+
         // OPERATOR : /[*-^/+\\>\\<$&?]+/
         OPERATOR : ( "*" | "-" | "^" | "/" | "+" | ">" | "<" | "$" | "&" | "?" )+
