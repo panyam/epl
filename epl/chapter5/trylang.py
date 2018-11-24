@@ -6,10 +6,10 @@ from epl.chapter5 import continuations
 
 class TryCatch(object):
     """ A try catch expression. """
-    def __init__(self, expr, varname, excexpr):
+    def __init__(self, expr, varname, handlerexpr):
         self.expr = expr
         self.varname = varname
-        self.exception = exception
+        self.handler = handler
 
     def printables(self):
         yield 0, "Try:"
@@ -42,20 +42,31 @@ class Eval(continuations.Eval):
 
     @case("tryexpr")
     def valueOfTry(self, tryexpr, env, cont):
-        return self(tryexpr, env, TryCont(tryexpr, env, cont))
+        return self(tryexpr.expr, env, TryCont(cont, tryexpr))
 
     @case("raiseexpr")
     def valueOfRaise(self, raiseexpr, env, cont):
-        return self(raiseexpr, env, RaiseCont(cont))
+        return self(raiseexpr, env, RaiseCont(self, env, cont))
 
 class TryCont(continuations.Cont):
-    def __init__(self, Eval, env, cont, tryexpr):
-        continuations.Cont(Eval, env, cont)
+    def __init__(self, cont, tryexpr):
+        continuations.Cont.__init__(self, None, None, cont)
         self.tryexpr = tryexpr
 
-    def start(self):
-        return self.Eval(self.tryexpr.expr, self.env, self)
-
     def apply(self, result):
-        # TODO - How about the raise case?
-        return self.cont.apply(result)
+        return self.nextcont.apply(result)
+
+class RaiseCont(continuations.Cont):
+    def __init__(self, Eval, env, cont):
+        continuations.Cont(Eval, env, cont)
+
+    def apply(self, exc):
+        # We have an exception here so we need to find the closes handler 
+        # that can handle this exception
+        cont = self
+        while cont and type(cont) is not TryCont:
+            cont = cont.nextcont
+        assert cont is not None
+        tryexpr = cont.tryexpr
+        newenv = cont.env.push().setone(tryexpr.varname, exc)
+        return self.Eval(tryexpr.handler, newenv, cont)

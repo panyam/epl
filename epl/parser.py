@@ -2,7 +2,7 @@
 from ipdb import set_trace
 from lark import Lark, Transformer
 
-reserved_words = ["set", "letrec", "ref", "setref", "newref", "deref", "begin", "end", "let", "proc", "if", "isz"]
+reserved_words = ["set", "letrec", "ref", "setref", "newref", "deref", "begin", "end", "let", "proc", "if", "isz", "try", "raise"]
 
 parser = Lark("""
         start : call_expr
@@ -13,6 +13,7 @@ parser = Lark("""
             |   letrec_expr
             |   paren_expr
             |   num
+            |   string
             |   var_expr
             |   tuple_expr
             |   iszero_expr
@@ -20,8 +21,12 @@ parser = Lark("""
             |   ref_expr
             |   op_expr
             |   lazy_expr
+            |   try_expr
+            |   raise_expr
 
         !num : NUMBER | "-" NUMBER
+
+        string : STRING
 
         lazy_expr : "'" call_expr
 
@@ -46,6 +51,9 @@ parser = Lark("""
 
         paren_expr : "(" call_expr ")"
 
+        try_expr : "try" call_expr "catch" "(" VARNAME ")" call_expr
+        raise_expr : "raise" call_expr
+
         if_expr : "if" call_expr "then" call_expr "else" call_expr
 
         proc_expr : "proc" "(" varnames ")" call_expr
@@ -61,11 +69,9 @@ parser = Lark("""
         call_expr : expr | call_expr expr
 
         NUMBER : /[0-9]+/
+        STRING : /\\\"(\\\\.|[^"\\\\])*\\\"/
         
-        // VARNAME : /[a-zA-Z]+/
         VARNAME : /(?!{reserved_words})[_a-zA-Z][_a-z\\-A-Z0-9]*/
-        // OPERATOR : ( "*" "-" "^" "/" "+" ">" "<" "$" "&" "?" )+
-        // OPERATOR : /[*-^/+\\>\\<$&?]+/
         OPERATOR : ( "*" | "-" | "^" | "/" | "+" | ">" | "<" | "$" | "&" | "?" )+
         %import common.WS
         %ignore WS
@@ -102,6 +108,10 @@ class BasicMixin(object):
     def expr(self, matches):
         self.assertIsExpr(matches, 1)
         return matches[0]
+
+    def string(self, matches):
+        strvalue = matches[0].value[1:-1]
+        return self.expr_class.as_lit(strvalue)
 
     def num(self, matches):
         mult = 1
@@ -202,7 +212,16 @@ class RefMixin(object):
     def assign_expr(self, matches):
         return self.expr_class.as_assign(matches[0].value, matches[1])
 
-class ASTTransformer(Transformer, BasicMixin, LetMixin, ProcMixin, LetRecMixin, ExtMixin, RefMixin):
+class ExceptionsMixin(object):
+    def try_expr(self, matches):
+        expr, varname, handlerexpr = matches
+        set_trace()
+        return self.expr_class.as_tryexpr(expr, varname, handlerexpr)
+
+    def raise_expr(self, matches):
+        return self.expr_class.as_raiseexpr(matches[0])
+
+class ASTTransformer(Transformer, BasicMixin, LetMixin, ProcMixin, LetRecMixin, ExtMixin, RefMixin, ExceptionsMixin):
     def __init__(self,expr_class, optable):
         self.expr_class = expr_class
         self.optable = optable
