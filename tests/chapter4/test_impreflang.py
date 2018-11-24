@@ -3,6 +3,7 @@ from ipdb import set_trace
 from epl.utils import eprint
 from epl.chapter4 import impreflang
 from tests.utils import runevaltest
+from tests.chapter4 import cases
 
 Expr = impreflang.Expr
 Eval = impreflang.Eval
@@ -11,65 +12,14 @@ def runtest(input, exp, **extra_env):
     return runevaltest(Expr, Eval, input, exp, **extra_env)
 
 def test_oddeven():
-    input = """
-    let x = 0 in
-        letrec
-            even(dummy)
-                = if isz(x)
-                  then 1
-                  else begin
-                    set x = -(x,1) ;
-                    (odd 888)
-                  end
-            odd(dummy)
-                = if isz(x)
-                  then 0
-                  else begin
-                    set x = -(x,1) ;
-                    (even 888)
-                  end
-        in begin set x = 13 ; (odd 888) end
-    """
-    runtest(input, True)
+    runtest(*(cases.imprefs["oddeven"]))
 
 def test_counter():
-    input = """
-        let g = let counter = 0
-                in proc(dummy)
-                    begin
-                        set counter = -(counter, -1) ;
-                        counter
-                    end
-        in let a = (g 11)
-            in let b = (g 11)
-                in -(a,b)
-    """
-    runtest(input, -1)
+    runtest(*(cases.imprefs["counter"]))
 
 def test_recproc():
-    input = """
-        let times4 = 0 in
-            begin
-                set times4 = proc(x)
-                                if isz(x)
-                                then 0
-                            else -((times4 -(x,1)), -4) ;
-                (times4 3)
-            end
-    """
-    runtest(input, 12)
+    runtest(*(cases.imprefs["recproc"]))
 
 def test_callbyref():
-    input = """
-        let a = 3
-        in let b = 4
-            in let swap = proc(x,y)
-                            let temp = deref(x)
-                            in begin
-                                setref(x, deref(y));
-                                setref(y,temp)
-                            end
-                in begin ((swap ref a) ref b) ; -(a,b) end
-    """
-    runtest(input, 1)
+    runtest(*(cases.imprefs["callbyref"]))
 

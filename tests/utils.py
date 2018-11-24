@@ -1,6 +1,7 @@
 
 from ipdb import set_trace
 from epl.env import DefaultEnv as Env
+from epl.utils import eprint
 from tests import externs
 from tests.parser.utils import parse
 

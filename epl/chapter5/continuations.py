@@ -69,14 +69,14 @@ class Eval(CaseMatcher):
         return nextcont.start(self)
 
     @case("ref")
-    def valueOfref(self, ref, env, cont):
+    def valueOfRef(self, ref, env, cont):
         if not ref.is_var:
             ref = self.__caseon__.as_ref(self.valueOf(ref.expr, env)).ref
-        return cont.apply(ref)
+        return cont.apply(self, ref)
 
     @case("deref")
     def valueOfDeRef(self, deref, env, cont):
-        return self.valueOf(deref.expr, env, DeRefCont(cont))
+        return self.valueOf(deref.expr, env, DeRefCont(env, cont))
 
     @case("setref")
     def valueOfSetRef(self, setref, env, cont):
@@ -90,7 +90,8 @@ class Eval(CaseMatcher):
 
     @case("assign")
     def valueOfAssign(self, assign, env, cont):
-        return self.valueOf(assign.expr, env, AssignCont(env, cont))
+        return self.valueOf(assign.expr, env,
+                    AssignCont(assign.varname, env, cont))
 
     @case("lazy")
     def valueOfLazy(self, lazy_expr, env, cont):
@@ -168,11 +169,10 @@ class DeRefCont(Cont):
         self.cont = cont
 
     def apply(self, Eval, ref):
-        assert type(ref) is RefExpr
         result = ref.expr
         if ref.is_var:
             # Then get the value of the named ref
-            result = env.get(ref.expr)
+            result = self.env.get(ref.expr)
         return self.cont.apply(Eval, result)
 
 class SetRefCont(Cont):
@@ -189,17 +189,17 @@ class SetRefCont(Cont):
         if self.state == 0:
             self.state += 1
             self.val1 = ref
-            assert type(self.val1) is RefExpr
             return Eval(self.setref.value, self.env, self)
         else:
+            val2 = ref
             if self.val1.is_var:
                 # since a named ref get the ref by name first - 
                 # we have an extra level of indirection here
-                env.replace(self.val1.expr, val2)
+                self.env.replace(self.val1.expr, val2)
             else:
                 # Set ref as is
                 self.val1.expr = val2
-            self.cont.apply(val2)
+            return self.cont.apply(Eval, val2)
 
 class AssignCont(Cont):
     def __init__(self, varname, env, cont):
@@ -209,7 +209,7 @@ class AssignCont(Cont):
     
     def apply(self, Eval, result):
         self.env.replace(self.varname, result)
-        self.cont.apply(result)
+        return self.cont.apply(Eval, result)
 
 class LetCont(Cont):
     def __init__(self, letexpr, env, cont):
@@ -280,7 +280,7 @@ class ApplyProcCont(Cont):
 
         if nargs > arglen:  # Time to curry
             left_varnames = procexpr.varnames[arglen:]
-            newprocexpr = ProcExpr(left_varnames, procexpr.body)
+            newprocexpr = Eval.__caseon__.as_proc(left_varnames, procexpr.body).procexpr
             return self.cont.apply(Eval, newprocexpr.bind(newenv))
 
         elif nargs == arglen:

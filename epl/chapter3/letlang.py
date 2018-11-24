@@ -69,7 +69,7 @@ class OpExpr(object):
             self.exprs = list(exprs)
 
     def printables(self):
-        yield 0, "Op (%s):", self.op
+        yield 0, "Op (%s):" % self.op
         for exp in self.exprs:
             yield 1, exp.printables()
 
