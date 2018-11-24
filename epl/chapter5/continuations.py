@@ -18,7 +18,7 @@ class Eval(CaseMatcher):
 
     @case("num")
     def valueOfNum(self, num, env, cont):
-        return cont.apply(self, self.__caseon__.as_num(num.value))
+        return cont.apply(self, num.value)
 
     @case("var")
     def valueOfVar(self, var, env, cont):
@@ -110,17 +110,16 @@ class Cont(object):
         assert False, "Implement this."
 
 class EndCont(Cont):
-    def apply(self, Eval, expr) -> Cont:
-        assert expr.is_num
-        return expr.num.value
+    def apply(self, Eval, value : int) -> Cont:
+        assert type(value) is int
+        return value
 
 class IsZeroCont(Cont):
     def __init__(self, cont):
         self.cont = cont
 
-    def apply(self, Eval, expr):
-        assert expr.is_num
-        return self.cont.apply(expr.num == 0)
+    def apply(self, Eval, value : int):
+        return self.cont.apply(Eval, value == 0)
 
 class IfCont(Cont):
     def __init__(self, ifexpr, env, cont):
@@ -129,7 +128,7 @@ class IfCont(Cont):
         self.cont = cont
 
     def start(self, Eval):
-        return Eval(self.ifexpr.cond, env, self)
+        return Eval(self.ifexpr.cond, self.env, self)
 
     def apply(self, Eval, expr):
         if expr:
@@ -160,7 +159,7 @@ class ExprListCont(Cont):
         else:
             result = self.results
             if self.onresults:
-                result = onresults(result)
+                result = self.onresults(result)
             return self.cont.apply(Eval, result)
 
 class DeRefCont(Cont):
