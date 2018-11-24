@@ -2,6 +2,7 @@
 
 import typing
 from epl.unions import *
+from epl.chapter3 import letlang
 from epl.chapter4 import lazylang
 
 class Eval(CaseMatcher):
@@ -16,9 +17,9 @@ class Eval(CaseMatcher):
             cont = EndCont()
         return self(expr, env, cont)
 
-    @case("num")
-    def valueOfNum(self, num, env, cont):
-        return cont.apply(self, num.value)
+    @case("lit")
+    def valueOfLit(self, lit, env, cont):
+        return cont.apply(self, lit)
 
     @case("var")
     def valueOfVar(self, var, env, cont):
@@ -112,7 +113,7 @@ class Cont(object):
 
 class EndCont(Cont):
     def apply(self, Eval, value : int) -> Cont:
-        assert type(value) is int
+        assert type(value) is letlang.Lit
         return value
 
 class IsZeroCont(Cont):

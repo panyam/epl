@@ -109,7 +109,7 @@ class BasicMixin(object):
             mult = -1
         token = matches[-1]
         assert token.type == 'NUMBER'
-        return self.expr_class.as_num(int(token.value) * mult)
+        return self.expr_class.as_lit(int(token.value) * mult)
 
     def var_expr(self, matches):
         token = matches[0]

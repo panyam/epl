@@ -18,7 +18,7 @@ exprefs = {
                         (even 888)
                       end
             in begin setref(x, 13) ; (odd 888) end
-            """, True),
+            """, 1),
     "counter": ("""
         let g = let counter = newref(0)
                 in proc(dummy)
@@ -51,7 +51,7 @@ imprefs = {
                         (even 888)
                       end
             in begin set x = 13 ; (odd 888) end
-        """, True),
+        """, 1),
     "counter": ("""
             let g = let counter = 0
                     in proc(dummy)

@@ -1,6 +1,7 @@
 
 from ipdb import set_trace
-from epl.utils import eprint
+from epl import bp
+from epl.bp import eprint
 from epl.chapter3 import letreclang
 from tests.utils import runevaltest
 from tests.chapter3 import cases
@@ -14,7 +15,7 @@ def runtest(input, exp, **extra_env):
 def test_double():
     runtest(*(cases.letreclang["double"]))
 
-def test_double():
+def test_oddeven():
     runtest(*(cases.letreclang["oddeven"]))
 
 def test_currying():

@@ -1,10 +1,12 @@
 
+from ipdb import set_trace
 import functools
+from epl.common import Lit
 
 # "Custom" functions are just "calls" as macros!!!
 def contenv():
     def isz_expr_eval(exprs):
-        return exprs[0].num.value == 0
+        return Lit(exprs[0].value == 0)
 
     def minus_expr_eval(exprs):
         val1 = exprs[0]
@@ -14,15 +16,15 @@ def contenv():
     def div_expr_eval(exprs):
         val1 = exprs[0]
         val2 = exprs[1]
-        return val1 / val2
+        return Lit(val1.value / val2.value)
 
     def plus_expr_eval(exprs):
-        vals = exprs
-        return sum(vals)
+        vals = [e.value for e in exprs]
+        return Lit(sum(vals))
 
     def mult_expr_eval(exprs):
-        vals = exprs
-        return functools.reduce(lambda x,y: x*y, vals, 1)
+        vals = [e.value for e in exprs]
+        return Lit(functools.reduce(lambda x,y: x*y, vals, 1))
 
     return {
         "isz": isz_expr_eval,
@@ -34,7 +36,7 @@ def contenv():
 
 def env():
     def isz_expr_eval(evalfunc, env, exprs):
-        return evalfunc(exprs[0], env) == 0
+        return Lit(evalfunc(exprs[0], env).value == 0)
 
     def minus_expr_eval(evalfunc, env, exprs):
         val1 = evalfunc(exprs[0], env)
@@ -42,17 +44,17 @@ def env():
         return val1 - val2
 
     def div_expr_eval(evalfunc, env, exprs):
-        val1 = evalfunc(exprs[0], env)
-        val2 = evalfunc(exprs[1], env)
-        return val1 / val2
+        val1 = evalfunc(exprs[0], env).value
+        val2 = evalfunc(exprs[1], env).value
+        return Lit(val1 / val2)
 
     def plus_expr_eval(evalfunc, env, exprs):
-        vals = [evalfunc(exp, env) for exp in exprs]
-        return sum(vals)
+        vals = [evalfunc(exp, env).value for exp in exprs]
+        return Lit(sum(vals))
 
     def mult_expr_eval(evalfunc, env, exprs):
-        vals = [evalfunc(exp, env) for exp in exprs]
-        return functools.reduce(lambda x,y: x*y, vals, 1)
+        vals = [evalfunc(exp, env).value for exp in exprs]
+        return Lit(functools.reduce(lambda x,y: x*y, vals, 1))
 
     return {
         "isz": isz_expr_eval,

@@ -1,7 +1,7 @@
 
-from ipdb import set_trace
 import pytest
-from epl.utils import eprint
+from epl import bp
+from epl.bp import eprint
 from epl.chapter4 import lazylang
 from tests.utils import runevaltest
 from tests.chapter4 import cases

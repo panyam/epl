@@ -1,18 +1,7 @@
 
+from epl import bp
 from epl.unions import *
-
-class Number(object):
-    def __init__(self, value):
-        self.value = value
-
-    def __eq__(self, another):
-        return self.value == another.value
-
-    def __repr__(self):
-        return "<Num(%d)>" % self.value
-
-    def printables(self):
-        yield 0, "num %d" % self.value
+from epl.common import Lit
 
 class VarExpr(object):
     def __init__(self, name):
@@ -128,7 +117,7 @@ class LetExpr(object):
 
 class Expr(Union):
     # Convert this into a union metaclass
-    num = Variant(Number)
+    lit = Variant(Lit)
     var = Variant(VarExpr)
     opexpr = Variant(OpExpr)
     tupexpr = Variant(TupleExpr, checker = "is_tup", constructor = "as_tup")
@@ -156,12 +145,10 @@ class Eval(CaseMatcher):
         # We expect the signature of "valueOf" and each selected
         # subexpression to have the same arity and return type
         return self(expr, env)
-        # func, child = self.select(expr)
-        # return func(self, child, env)
 
-    @case("num")
-    def valueOfNumber(self, num, env = None):
-        return num.value
+    @case("lit")
+    def valueOfLit(self, lit, env = None):
+        return lit
 
     @case("var")
     def valueOfVar(self, var, env):
@@ -182,11 +169,11 @@ class Eval(CaseMatcher):
 
     @case("iszero")
     def valueOfIsZero(self, iszero, env):
-        return self.valueOf(iszero.expr, env) == 0
+        return Lit(self.valueOf(iszero.expr, env).value == 0)
 
     @case("ifexpr")
     def valueOfIf(self, ifexpr, env):
-        result = self.valueOf(ifexpr.cond, env)
+        result = self.valueOf(ifexpr.cond, env).value
         return self.valueOf(ifexpr.exp1 if result else ifexpr.exp2, env)
 
     @case("let")

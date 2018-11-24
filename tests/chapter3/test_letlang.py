@@ -1,5 +1,6 @@
 
 from ipdb import set_trace
+from epl.common import Lit
 from epl.chapter3 import letlang
 from tests.utils import runevaltest
 from tests.chapter3 import cases
@@ -14,7 +15,7 @@ def test_num():
     runtest(*(cases.letlang["num"]))
 
 def test_var():
-    runtest(*(cases.letlang["var"]), x = 5)
+    runtest(*(cases.letlang["var"]), x = Lit(5))
 
 def test_zero_true():
     runtest(*(cases.letlang["isz_true"]))
@@ -23,10 +24,10 @@ def test_zero_false():
     runtest(*(cases.letlang["isz_false"]))
 
 def test_diff():
-    runtest(*(cases.letlang["diff"]), i = 1, v = 5, x = 10)
+    runtest(*(cases.letlang["diff"]), i = Lit(1), v = Lit(5), x = Lit(10))
 
 def test_if():
-    runtest(*(cases.letlang["if"]), x = 33, y = 22)
+    runtest(*(cases.letlang["if"]), x = Lit(33), y = Lit(22))
 
 def test_let():
     runtest(*(cases.letlang["let"]))

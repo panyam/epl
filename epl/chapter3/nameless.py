@@ -68,7 +68,7 @@ class NLetRecExpr(object):
         yield 2, self.body.printables()
 
 class NExpr(Union):
-    num = Variant(letlang.Number)
+    lit = Variant(letlang.Lit)
     iszero = Variant(letlang.IsZeroExpr)
     opexpr = Variant(letlang.OpExpr)
     tupexpr = Variant(letlang.TupleExpr, checker = "is_tup", constructor = "as_tup")
@@ -113,9 +113,9 @@ class Translator(CaseMatcher):
         senv = senv or Translator.StaticEnv()
         return self(expr, senv)
 
-    @case("num")
-    def translateNumber(self, num, senv):
-        return NExpr.as_num(num.value)
+    @case("lit")
+    def translateLit(self, lit, senv):
+        return NExpr.as_lit(lit)
 
     @case("opexpr")
     def translateDiff(self, opexpr, senv):
@@ -207,9 +207,9 @@ class Eval(CaseMatcher):
         env = env or Eval.NEnv()
         return self(nexpr, env)
 
-    @case("num")
-    def valueOfNumber(self, num, env):
-        return num.value
+    @case("lit")
+    def valueOfLit(self, lit, env):
+        return lit
 
     @case("opexpr")
     def valueOfOpExpr(self, opexpr, env):

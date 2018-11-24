@@ -1,6 +1,6 @@
 
-from ipdb import set_trace
-from epl.utils import eprint
+from epl import bp
+from epl.bp import eprint
 from epl.chapter3 import proclang
 from tests.utils import runevaltest
 from tests.chapter3 import cases

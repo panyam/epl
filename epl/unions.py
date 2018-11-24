@@ -1,10 +1,11 @@
 from ipdb import set_trace
 
 class Variant(object):
-    def __init__(self, vartype, checker = None, constructor = None):
+    def __init__(self, vartype, checker = None, constructor = None, from_constructor = None):
         self.vartype = vartype
         self.checker = checker
         self.constructor = constructor
+        self.from_constructor = from_constructor 
 
 class UnionMeta(type):
     def __new__(cls, name, bases, dct):
@@ -20,9 +21,19 @@ class UnionMeta(type):
                     assert False, "Invalid variant type getter called"
             return property(getter)
 
-        def makeconstructor(vname, vtype):
+        def make_constructor(vname, vtype):
             def constructor(cls, *args, **kwargs):
                 value = vtype(*args, **kwargs)
+                out = cls()
+                out._variant_value = value
+                out._variant_type = vname
+                return out
+            return classmethod(constructor)
+
+        def make_from_constructor(vname, vtype):
+            def constructor(cls, value):
+                if type(value) is not vtype: set_trace()
+                assert type(value) is vtype
                 out = cls()
                 out._variant_value = value
                 out._variant_type = vname
@@ -39,11 +50,14 @@ class UnionMeta(type):
                 variant.checker = "is_" + vname
             if not variant.constructor:
                 variant.constructor = "as_" + vname
+            if not variant.from_constructor:
+                variant.from_constructor = "from_" + vname
 
             vtype,checker = variant.vartype, variant.checker
             newfields[checker] = makechecker(vtype)
             newfields[vname] = makegetter(checker, vtype)
-            newfields[variant.constructor] = makeconstructor(vname, vtype)
+            newfields[variant.constructor] = make_constructor(vname, vtype)
+            newfields[variant.from_constructor] = make_from_constructor(vname, vtype)
         for k,v in newfields.items(): setattr(x,k,v)
         setattr(x, "__variants__", __variants__)
         return x

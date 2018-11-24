@@ -107,7 +107,7 @@ class Eval(letreclang.Eval):
 
     @case("block")
     def valueOfBlock(self, block, env):
-        value = self.__caseon__.as_num(0)
+        value = self.__caseon__.as_lit(0)
         for expr in block.exprs:
             value = self(expr, env)
         return value
