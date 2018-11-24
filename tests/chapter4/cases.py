@@ -84,7 +84,15 @@ imprefs = {
                                     setref(y,temp)
                                 end
                     in begin ((swap ref a) ref b) ; -(a,b) end
-        """, 1)
+        """, 1),
+}
+
+misc = {
+    "fact4": ("""
+        letrec fact(n) = if (isz n) then 1 else * (n, (fact -(n, 1)))
+        in
+        (fact 4)
+    """, 24)
 }
 
 lazy = {
