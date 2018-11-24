@@ -19,16 +19,16 @@ class Eval(CaseMatcher):
 
     @case("lit")
     def valueOfLit(self, lit, env, cont):
-        return cont.apply(self, lit)
+        return cont.apply(lit)
 
     @case("var")
     def valueOfVar(self, var, env, cont):
         value = env.get(var.name)
-        return cont.apply(self, value)
+        return cont.apply(value)
 
     @case("procexpr")
     def valueOfProcExpr(self, procexpr, env, cont):
-        return cont.apply(self, procexpr.bind(env))
+        return cont.apply(procexpr.bind(env))
 
     @case("iszero")
     def valueOfIsZero(self, iszero, env, cont):
@@ -37,15 +37,15 @@ class Eval(CaseMatcher):
     @case("ifexpr")
     def valueOfIf(self, ifexpr, env, cont):
         # Eval mappings with end continuations
-        nextcont = IfCont(ifexpr, env, cont)
-        return nextcont.start(self)
+        nextcont = IfCont(self, env, cont, ifexpr)
+        return nextcont.start()
 
     @case("let")
     def valueOfLet(self, let, env, cont):
         # With let we want to chain the let bindings one after the other
         # Eval mappings with end continuations
-        nextcont = LetCont(let, env, cont)
-        return nextcont.start(self)
+        nextcont = LetCont(self, env, cont, let)
+        return nextcont.start()
 
     @case("letrec")
     def valueOfLetRec(self, letrec, env, cont):
@@ -56,9 +56,8 @@ class Eval(CaseMatcher):
 
     @case("tupexpr")
     def valueOfTupExpr(self, tupexpr, env, cont):
-        nextcont = ExprListCont(tupexpr.children, env, cont,
-                                self.__caseon__.as_tup)
-        return nextcont.start(self)
+        nextcont = ExprListCont(self, env, cont, tupexpr.children, self.__caseon__.as_tup)
+        return nextcont.start()
 
     @case("opexpr")
     def valueOfOpExpr(self, opexpr, env, cont):
@@ -66,37 +65,37 @@ class Eval(CaseMatcher):
         # Eval mappings with end continuations
         opfunc = env.get(opexpr.op)
         assert opfunc is not None, "No plug in found for operator: %s" % opexpr.op
-        nextcont = ExprListCont(opexpr.exprs, env, cont, opfunc)
-        return nextcont.start(self)
+        nextcont = ExprListCont(self, env, cont, opexpr.exprs, opfunc)
+        return nextcont.start()
 
     @case("ref")
     def valueOfRef(self, ref, env, cont):
         if not ref.is_var:
             ref = self.__caseon__.as_ref(self.valueOf(ref.expr, env)).ref
-        return cont.apply(self, ref)
+        return cont.apply(ref)
 
     @case("deref")
     def valueOfDeRef(self, deref, env, cont):
-        return self.valueOf(deref.expr, env, DeRefCont(env, cont))
+        return self.valueOf(deref.expr, env, DeRefCont(self, env, cont))
 
     @case("setref")
     def valueOfSetRef(self, setref, env, cont):
-        return self.valueOf(setref.ref, env, SetRefCont(setref, env, cont))
+        return self.valueOf(setref.ref, env, SetRefCont(self, env, cont, setref))
 
     @case("block")
     def valueOfBlock(self, block, env, cont):
-        nextcont = ExprListCont(block.exprs, env, cont,
+        nextcont = ExprListCont(self, env, cont, block.exprs,
                             lambda results: results[-1])
-        return nextcont.start(self)
+        return nextcont.start()
 
     @case("assign")
     def valueOfAssign(self, assign, env, cont):
         return self.valueOf(assign.expr, env,
-                    AssignCont(assign.varname, env, cont))
+                    AssignCont(self, env, cont, assign.varname))
 
     @case("lazy")
     def valueOfLazy(self, lazy_expr, env, cont):
-        return cont.apply(self, lazy_expr.bind(env))
+        return cont.apply(lazy_expr.bind(env))
 
     @case("thunk")
     def valueOfThunk(self, thunk, env, cont):
@@ -104,93 +103,97 @@ class Eval(CaseMatcher):
 
     @case("callexpr")
     def valueOfCall(self, callexpr, env, cont):
-        nextcont = CallCont(callexpr, env, cont)
-        return nextcont.start(self)
+        nextcont = CallCont(self, env, cont, callexpr)
+        return nextcont.start()
 
 class Cont(object):
-    def apply(self, Eval, expr) -> "Cont":
+    def __init__(self, Eval, env, nextcont = None):
+        self.Eval = Eval
+        self.nextcont = nextcont
+        self.env = env
+
+    def apply(self, expr) -> "Cont":
         assert False, "Implement this."
 
 class EndCont(Cont):
-    def apply(self, Eval, value : int) -> Cont:
+    def __init__(self):
+        Cont.__init__(self, None, None, None)
+
+    def apply(self, value : int) -> Cont:
         assert type(value) is letlang.Lit
         return value
 
 class IsZeroCont(Cont):
     def __init__(self, cont):
-        self.cont = cont
+        Cont.__init__(self, None, None, cont)
 
-    def apply(self, Eval, value : int):
-        return self.cont.apply(Eval, value == 0)
+    def apply(self, value : int):
+        return self.nextcont.apply(value == 0)
 
 class IfCont(Cont):
-    def __init__(self, ifexpr, env, cont):
+    def __init__(self, Eval, env, cont, ifexpr):
+        Cont.__init__(self, Eval, env, cont)
         self.ifexpr = ifexpr
-        self.env = env
-        self.cont = cont
 
-    def start(self, Eval):
-        return Eval(self.ifexpr.cond, self.env, self)
+    def start(self):
+        return self.Eval(self.ifexpr.cond, self.env, self)
 
-    def apply(self, Eval, expr):
+    def apply(self, expr):
         if expr:
-            return Eval(self.ifexpr.exp1, self.env, self.cont)
+            return self.Eval(self.ifexpr.exp1, self.env, self.nextcont)
         else:
-            return Eval(self.ifexpr.exp2, self.env, self.cont)
+            return self.Eval(self.ifexpr.exp2, self.env, self.nextcont)
 
 class ExprListCont(Cont):
     """ A general continuation that needs to evaluate and "collect" N expressions in before another operation that depends on these results can be performed.  Also it is required that we chain results from one to another."""
-    def __init__(self, exprs, env, cont, onresults = None):
+    def __init__(self, Eval, env, cont, exprs, onresults = None):
+        Cont.__init__(self, Eval, env, cont)
         self.curr = 0
         self.exprs = exprs
-        self.env = env
-        self.cont = cont
         self.onresults = onresults
         self.results = []
 
-    def start(self, Eval):
-        return Eval(self.exprs[0], self.env, self)
+    def start(self):
+        return self.Eval(self.exprs[0], self.env, self)
 
-    def apply(self, Eval, expr):
+    def apply(self, expr):
         self.curr += 1
         self.results.append(expr)
         if self.curr < len(self.exprs):
             # we have more
             nextexpr = self.exprs[self.curr]
-            return Eval(nextexpr, self.env, self)
+            return self.Eval(nextexpr, self.env, self)
         else:
             result = self.results
             if self.onresults:
                 result = self.onresults(result)
-            return self.cont.apply(Eval, result)
+            return self.nextcont.apply(result)
 
 class DeRefCont(Cont):
-    def __init__(self, env, cont):
-        self.env = env
-        self.cont = cont
+    def __init__(self, Eval, env, cont):
+        Cont.__init__(self, Eval, env, cont)
 
-    def apply(self, Eval, ref):
+    def apply(self, ref):
         result = ref.expr
         if ref.is_var:
             # Then get the value of the named ref
             result = self.env.get(ref.expr)
-        return self.cont.apply(Eval, result)
+        return self.nextcont.apply(result)
 
 class SetRefCont(Cont):
-    def __init__(self, setref, env, cont):
+    def __init__(self, Eval, env, cont, setref):
+        Cont.__init__(self, Eval, env, cont)
         self.state = 0      # 0 = processing ref
                             # 1 == processing value
         self.setref = setref
-        self.env = env
-        self.cont = cont
         # results of setref child evaluations
         self.val1 = None
 
-    def apply(self, Eval, ref):
+    def apply(self, ref):
         if self.state == 0:
             self.state += 1
             self.val1 = ref
-            return Eval(self.setref.value, self.env, self)
+            return self.Eval(self.setref.value, self.env, self)
         else:
             val2 = ref
             if self.val1.is_var:
@@ -200,33 +203,31 @@ class SetRefCont(Cont):
             else:
                 # Set ref as is
                 self.val1.expr = val2
-            return self.cont.apply(Eval, val2)
+            return self.nextcont.apply(val2)
 
 class AssignCont(Cont):
-    def __init__(self, varname, env, cont):
+    def __init__(self, Eval, env, cont, varname):
+        Cont.__init__(self, Eval, env, cont)
         self.varname = varname
-        self.env = env
-        self.cont = cont
     
-    def apply(self, Eval, result):
+    def apply(self, result):
         self.env.replace(self.varname, result)
-        return self.cont.apply(Eval, result)
+        return self.nextcont.apply(result)
 
 class LetCont(Cont):
-    def __init__(self, letexpr, env, cont):
+    def __init__(self, Eval, env, cont, letexpr):
+        Cont.__init__(self, Eval, env, cont)
         self.curr = 0
         self.letexpr = letexpr
         self.varnames = list(letexpr.mappings.keys())
-        self.env = env
         self.newenv = env.push()
-        self.cont = cont
 
-    def start(self, Eval):
+    def start(self):
         self.currvar = self.varnames[0]
         expr1 = self.letexpr.mappings[self.currvar]
-        return Eval(expr1, self.env, self)
+        return self.Eval(expr1, self.env, self)
 
-    def apply(self, Eval, expr):
+    def apply(self, expr):
         # Here we are called with the "expr" of the ith var being processed
         lastvar = self.currvar
         self.newenv.setone(lastvar, expr)
@@ -235,34 +236,32 @@ class LetCont(Cont):
             # Now evaluate the next var as if it is the body
             self.currvar = self.varnames[self.curr]
             nextexpr = self.letexpr.mappings[self.currvar]
-            return Eval(nextpexr, self.newenv, self)
+            return self.Eval(nextpexr, self.newenv, self)
         else:
             # Here all bindings have been evaluated
-            return Eval(self.letexpr.body, self.newenv, self.cont)
+            return self.Eval(self.letexpr.body, self.newenv, self.nextcont)
 
 class CallCont(Cont):
-    def __init__(self, callexpr, env, cont):
+    def __init__(self, Eval, env, cont, callexpr):
+        Cont.__init__(self, Eval, env, cont)
         self.callexpr = callexpr
-        self.env = env
-        self.cont = cont
 
-    def start(self, Eval):
-        return Eval(self.callexpr.operator, self.env, self)
+    def start(self):
+        return self.Eval(self.callexpr.operator, self.env, self)
 
-    def apply(self, Eval, boundproc):
+    def apply(self, boundproc):
         # We just received operator result
         # so kick off arg 
-        proc_cont = ApplyProcCont(boundproc, self.env, self.cont)
-        nextcont = ExprListCont(self.callexpr.args, self.env, proc_cont)
-        return nextcont.start(Eval)
+        proc_cont = ApplyProcCont(self.Eval, self.env, self.nextcont, boundproc)
+        nextcont = ExprListCont(self.Eval, self.env, proc_cont, self.callexpr.args)
+        return nextcont.start()
 
 class ApplyProcCont(Cont):
-    def __init__(self, boundproc, env, cont):
+    def __init__(self, Eval, env, cont, boundproc):
+        Cont.__init__(self, Eval, env, cont)
         self.boundproc = boundproc
-        self.env = env
-        self.cont = cont
 
-    def apply(self, Eval, args):
+    def apply(self, args):
         # At this point operator and operands have been evaluated
         # So we need to do the "call" continuation
         # so each result is one "application"
@@ -281,12 +280,12 @@ class ApplyProcCont(Cont):
 
         if nargs > arglen:  # Time to curry
             left_varnames = procexpr.varnames[arglen:]
-            newprocexpr = Eval.__caseon__.as_proc(left_varnames, procexpr.body).procexpr
-            return self.cont.apply(Eval, newprocexpr.bind(newenv))
+            newprocexpr = self.Eval.__caseon__.as_proc(left_varnames, procexpr.body).procexpr
+            return self.nextcont.apply(newprocexpr.bind(newenv))
 
         elif nargs == arglen:
-            return Eval(procexpr.body, newenv, self.cont)
+            return self.Eval(procexpr.body, newenv, self.nextcont)
         
         else: # nargs < arglen
             # Only take what we need and return rest as a call expr
-            return Eval(procexpr, newenv, self.cont)
+            return self.Eval(procexpr, newenv, self.nextcont)
