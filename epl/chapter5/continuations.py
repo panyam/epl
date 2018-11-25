@@ -54,9 +54,9 @@ class Eval(CaseMatcher):
             newenv.setone(proc.name, proc.bind(newenv))
         return self.valueOf(letrec.body, newenv, cont)
 
-    @case("tupexpr")
-    def valueOfTupExpr(self, tupexpr, env, cont):
-        nextcont = ExprListCont(self, env, cont, tupexpr.children, self.__caseon__.as_tup)
+    @case("tup")
+    def valueOfTupExpr(self, tup, env, cont):
+        nextcont = ExprListCont(self, env, cont, tup.children, self.__caseon__.as_tup)
         return nextcont.start()
 
     @case("opexpr")

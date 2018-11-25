@@ -120,7 +120,7 @@ class Expr(Union):
     lit = Variant(Lit)
     var = Variant(VarExpr)
     opexpr = Variant(OpExpr)
-    tupexpr = Variant(TupleExpr, checker = "is_tup", constructor = "as_tup")
+    tup = Variant(TupleExpr, checker = "is_tup", constructor = "as_tup")
     iszero = Variant(IsZeroExpr)
     ifexpr = Variant(IfExpr, checker = "is_if", constructor = "as_if")
     let = Variant(LetExpr, checker = "is_let", constructor = "as_let")
@@ -128,10 +128,6 @@ class Expr(Union):
     @classmethod
     def as_diff(cls, e1, e2):
         return cls.as_opexpr("-", e1, e2)
-
-    def __eq__(self, another):
-        v1,v2 = self.variant_value, another.variant_value
-        return type(v1) == type(v2) and v1 == v2
 
     def printables(self):
         yield 0, self.variant_value.printables()
@@ -162,9 +158,9 @@ class Eval(CaseMatcher):
         assert opfunc is not None, "No plug in found for operator: %s" % opexpr.op
         return opfunc(self, env, opexpr.exprs)
 
-    @case("tupexpr")
-    def valueOfTUple(self, tupexpr, env):
-        values = [self.valueOf(v,env) for v in tupexpr.children]
+    @case("tup")
+    def valueOfTUple(self, tup, env):
+        values = [self.valueOf(v,env) for v in tup.children]
         return TupleExpr(*values)
 
     @case("iszero")

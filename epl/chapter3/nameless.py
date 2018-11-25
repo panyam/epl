@@ -71,7 +71,7 @@ class NExpr(Union):
     lit = Variant(letlang.Lit)
     iszero = Variant(letlang.IsZeroExpr)
     opexpr = Variant(letlang.OpExpr)
-    tupexpr = Variant(letlang.TupleExpr, checker = "is_tup", constructor = "as_tup")
+    tup = Variant(letlang.TupleExpr, checker = "is_tup", constructor = "as_tup")
     ifexpr = Variant(letlang.IfExpr, checker = "is_if", constructor = "as_if")
     callexpr = Variant(proclang.CallExpr, checker = "is_call", constructor = "as_call")
 
@@ -122,9 +122,9 @@ class Translator(CaseMatcher):
         exprs = [self(exp, senv) for exp in opexpr.exprs]
         return NExpr.as_op(opexpr.op, exprs)
 
-    @case("tupexpr")
-    def translateTupExpr(self, tupexpr, senv):
-        values = [self(v,env) for v in tupexpr.children]
+    @case("tup")
+    def translateTupExpr(self, tup, senv):
+        values = [self(v,env) for v in tup.children]
         return NExpr.as_tup(*values)
 
     @case("iszero")
@@ -215,9 +215,9 @@ class Eval(CaseMatcher):
     def valueOfOpExpr(self, opexpr, env):
         set_trace()
 
-    @case("tupexpr")
-    def valueOfTupExpr(self, tupexpr, env):
-        values = [self(v,env) for v in tupexpr.children]
+    @case("tup")
+    def valueOfTupExpr(self, tup, env):
+        values = [self(v,env) for v in tup.children]
         return TupleExpr(*values)
 
     @case("iszero")

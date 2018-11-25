@@ -74,6 +74,10 @@ class Union(metaclass = UnionMeta):
     def __repr__(self):
         return "<%s.%s(%s) at %x>" % (self.__class__.__module__, self.__class__.__name__, self.variant_type, id(self))
 
+    def __eq__(self, another):
+        v1,v2 = self.variant_value, another.variant_value
+        return type(v1) == type(v2) and v1 == v2
+
     @classmethod
     def hasvariant(cls, name):
         return name in (n for n,v in cls.__variants__)
