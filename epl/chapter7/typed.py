@@ -13,31 +13,54 @@ class BoxedType(object):
     def __eq__(self, another):
         return self.name == another.name and self.thetype == another.thetype
 
+    def __hash__(self):
+        return hash((self.name, self.thetype))
+
 class UnionType(object):
     def __init__(self, options):
-        self.options = options
+        self.options = frozenset(options)
+
+    def add(self, anothertype):
+        if anothertype in self.options:
+            return self
+        return UnionType(self.options.union(set((anothertype,))))
+
+    def __eq__(self, another):
+        return self.options == another.options
+
+    def __hash__(self):
+        return hash(self.options)
 
 class TupleType(object):
     def __init__(self, children):
-        self.children = children
+        self.children = tuple(children)
 
     def __eq__(self, another):
         return self.children == another.children
 
+    def __hash__(self):
+        return hash(self.children)
+
 class FuncType(object):
     def __init__(self, input_types, return_type):
-        self.input_types = input_tyeps
+        self.input_types = input_types
         self.return_type = return_type
 
     def __eq__(self, another):
         return self.input_types == another.input_types and \
                 self.return_type == another.return_type
 
+    def __hash__(self):
+        return hash(tuple(self.input_types + (self.return_type,)))
+
 class Type(Union):
     leaf = Variant(str)
     tup = Variant(TupleType)
     func = Variant(FuncType)
     box = Variant(BoxedType)
+
+    def __hash__(self):
+        return hash(self.variant_value)
 
 class TypeOf(CaseMatcher):
     __caseon__ = trylang.Expr
