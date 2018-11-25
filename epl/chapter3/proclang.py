@@ -29,9 +29,9 @@ class ProcExpr(object):
         yield 1, self.body.printables()
 
     def __eq__(self, another):
-        s1,s2 = set(self.varnames), set(another.varnames)
-        return s1 == s2 and self.name == another.name and \
-               self.body == another.body
+        return self.varnames == another.varnames and \
+                self.name == another.name and \
+                self.body == another.body
 
     def __repr__(self):
         if self.name:

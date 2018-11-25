@@ -3,6 +3,11 @@ import functools
 from epl import bp
 from lark import Lark, Transformer
 
+class Signature(object):
+    varnames = []
+    vartypes = []
+    return_type = None
+
 class BasicMixin(object):
     reserved = [ "if", "then", "else", "isz" ]
     expr_rules = [ "num", "string", "var_expr", "tuple_expr", "iszero_expr", "op_expr", "paren_expr", "if_expr"  ]
@@ -13,7 +18,6 @@ class BasicMixin(object):
         ("iszero_expr", """ "isz" call_expr  """),
         ("op_expr", """ OPERATOR call_expr """ ),
         ("if_expr",  """ "if" call_expr "then" call_expr "else" call_expr """),
-        ("varnames", """ VARNAME ( "," VARNAME ) * """ ),
         ("tuple_expr", """ "(" expr ( "," expr ) + ")" """ ),
         ("paren_expr", """ "(" call_expr ")" """ ),
     ]
@@ -62,23 +66,40 @@ class ProcMixin(object):
     reserved = [ "proc" ]
     expr_rules = [ "proc_expr" ]
     rules = [
-        ( "proc_expr", """ "proc" "(" varnames ")" call_expr """ ),
+        ( "proc_expr", """ "proc" proc_signature call_expr """ ),
+        ( "proc_signature", """ "(" param_decls ")" """ ),
+        ( "param_decls", """ param_decl ( "," param_decl ) * """),
+        ( "param_decl", """ VARNAME """)
     ]
 
     def proc_expr(self, matches):
-        varnames = [x.value for x in matches[0].children]
-        return self.expr_class.as_proc(varnames, matches[1])
+        return self.create_procexpr(matches[0], matches[1])
 
-class LetRecMixin(object):
-    reserved = [ "let", "letrec" ]
-    expr_rules = [ "let_expr", "letrec_expr" ]
+    def proc_signature(self, matches):
+        # Signature only has varnames
+        param_decls = matches[0].children
+        signature = Signature()
+        signature.varnames = param_decls
+        assert all([type(x) is str for x in signature.varnames])
+        return signature
+
+    def param_decl(self, matches):
+        assert len(matches) == 1
+        return matches[0].value
+
+    def create_procexpr(self, signature, body):
+        out = self.expr_class.as_proc(signature.varnames, body)
+        out.vartypes = signature.vartypes
+        out.return_type = signature.return_type
+        return out
+
+class LetMixin(object):
+    reserved = [ "let" ]
+    expr_rules = [ "let_expr" ]
     rules = [
         ( "let_expr", """ "let" let_mappings "in" call_expr """ ),
         ( "let_mapping", """ VARNAME "=" call_expr """ ),
         ( "let_mappings", """ let_mapping + """ ),
-        ( "letrec_expr", """ "letrec" letrec_mappings "in" call_expr """ ),
-        ( "letrec_mapping", """ VARNAME "(" varnames ")" "=" call_expr """ ),
-        ( "letrec_mappings", """ letrec_mapping + """ ),
     ]
 
     def let_expr(self, matches):
@@ -92,6 +113,14 @@ class LetRecMixin(object):
     def let_mapping(self, matches):
         return matches[0].value, matches[1]
 
+class LetRecMixin(object):
+    reserved = [ "letrec" ]
+    expr_rules = [ "letrec_expr" ]
+    rules = [
+        ( "letrec_expr", """ "letrec" letrec_mappings "in" call_expr """ ),
+        ( "letrec_mapping", """ VARNAME proc_signature "=" call_expr """ ),
+        ( "letrec_mappings", """ letrec_mapping + """ ),
+    ]
     def letrec_expr(self, matches):
         mappings = matches[0]
         body = matches[1]
@@ -101,12 +130,8 @@ class LetRecMixin(object):
         return dict(matches)
 
     def letrec_mapping(self, matches):
-        return (matches[0].value,
-                self.expr_class.as_proc(
-                    matches[1].children, matches[2]).procexpr)
+        return (matches[0].value, self.create_procexpr(matches[1], matches[2]).procexpr)
 
-
-    ### Call/Application expression
 class RefMixin(object):
     reserved = [ "set", "ref", "setref", "newref", "deref", "begin", "end" ]
     expr_rules = [ "ref_expr", "block_expr", "proc_expr" ]
@@ -161,14 +186,45 @@ class TryMixin(object):
 
     def try_expr(self, matches):
         expr, varname, handlerexpr = matches
-        set_trace()
+        bp.debug()
         return self.expr_class.as_tryexpr(expr, varname, handlerexpr)
 
     def raise_expr(self, matches):
         return self.expr_class.as_raiseexpr(matches[0])
 
 class TypingMixin(object):
-    reserved = [ "int", "bool" ]
+    reserved = []
+    expr_rules = [ ]
+    rules = [
+        ( "proc_signature", """ "(" param_decls ")" ( "->" type_decl ) ? """ ),
+        ( "param_decl", """ VARNAME ( ":" type_decl ) ? """),
+
+        ( "type_decl", """ no_type_decl | basic_type_decl | tuple_type_decl | func_type_decl """ ),
+        ( "no_type_decl", """ "?" """ ),
+        ( "basic_type_decl", """ VARNAME """ ),
+        ( "tuple_type_decl", """ "(" type_decl ( "," type_decl ) * ")" """ ),
+        ( "func_type_decl", """ type_decl  ( "->" type_decl ) * """)
+    ]
+
+    def proc_signature(self, matches):
+        assert len(matches) in (1, 2)
+        param_decls = matches[0].children
+        # Signature only has varnames
+        signature = Signature()
+        signature.varnames = [p[0] for p in param_decls]
+        signature.vartypes = [p[1] for p in param_decls]
+        if len(matches) == 2:
+            signature.return_type = matches[1]
+        if not all([type(x) is str for x in signature.varnames]):
+            bp.debug()
+        return signature
+
+    def param_decl(self, matches):
+        assert len(matches) in (1, 2)
+        if len(matches) == 1:
+            return matches[0].value, None
+        else:
+            return matches[0].value, matches[1]
 
 class BaseTransformer(Transformer):
     def __init__(self,expr_class, optable):
@@ -198,7 +254,7 @@ class BaseTransformer(Transformer):
                 count,maker = self.optable[m.var.name]
                 # Ensure we have enough elems
                 if (len(mc) - i) < (count + 1):
-                    set_trace()
+                    bp.debug()
                     assert False
                 params = mc[i + 1:i + count + 1]
                 del mc[i + 1:i + count + 1]
@@ -217,18 +273,25 @@ class BaseTransformer(Transformer):
             assert count < 0 or len(matches) == count, "Expected %d exprs" % count
             assert all(map(self.isExp, matches))
         except Exception as e:
-            set_trace()
+            bp.debug()
             raise e
 
 def make_parser(Expr, optable = None, *mixins):
     class Parser(object):
         def __init__(self):
-            bases = tuple([BaseTransformer] + list(mixins))
+            bases = tuple([BaseTransformer] + list(reversed(mixins)))
             self.transformer_class = type("ASTTransformer", bases, {})
             self.transformer = self.transformer_class(Expr, optable or {})
 
             expr_rules = functools.reduce(lambda x,y: x + y, [m.expr_rules for m in mixins], [])
-            sub_rules = functools.reduce(lambda x,y: x + y, [m.rules for m in mixins], [])
+            sub_rules = []
+            for m in mixins:
+                for nt,rule in m.rules:
+                    for i,sr in enumerate(sub_rules):
+                        if sr[0] == nt:
+                            del sub_rules[i]
+                            break
+                    sub_rules.append((nt,rule))
             reserved_words = "|".join(functools.reduce(lambda x,y: x+y, [m.reserved for m in mixins], [])),
             indentstr = "    " * 4
 
@@ -250,7 +313,7 @@ def make_parser(Expr, optable = None, *mixins):
                 %ignore WS
             """.format(reserved_words = reserved_words,
                         sub_rules = "\n\n".join(("%s%s : %s" % (indentstr, m[0], m[1])) for m in sub_rules),
-                       expr_rules = ("\n%s|    " % indentstr).join(expr_rules))
+                        expr_rules = ("\n%s|    " % indentstr).join(expr_rules))
 
             self.larkparser = Lark(self.grammar)
 

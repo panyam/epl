@@ -8,7 +8,8 @@ def default_env():
     return Env().set(**externs.env())
 
 def parse(input, expr_class, optable = None):
-    mixins = [ parser.BasicMixin, parser.ProcMixin, parser.LetRecMixin, parser.RefMixin, parser.TryMixin, parser.TypingMixin ]
+    mixins = [  parser.BasicMixin, parser.ProcMixin, parser.LetMixin,
+                parser.LetRecMixin, parser.RefMixin, parser.TryMixin, parser.TypingMixin ]
     theparser = parser.make_parser(expr_class, optable, *mixins)
     return theparser.parse(input)
 
