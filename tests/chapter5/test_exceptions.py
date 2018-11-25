@@ -18,6 +18,6 @@ def runtest(input, exp, **extra_env):
     return runevaltest(Expr, Eval, input, exp, starting_env, **extra_env)
 
 @pytest.mark.parametrize("input, expected", cases.exceptions.values())
-def test_lazy(input, expected):
+def _test_lazy(input, expected):
     runtest(input, expected)
 
