@@ -1,9 +1,14 @@
 
 from ipdb import set_trace
 from epl.bp import eprint
-from tests.parser.utils import parse
+from epl import parser
 from epl.common import Lit
 from epl.chapter3.letreclang import Expr
+
+def parse(input, exp):
+    mixins = [ parser.BasicMixin, parser.ProcMixin, parser.LetRecMixin ]
+    theparser = parser.make_parser(Expr, None, *mixins)
+    return theparser.parse(input)
 
 def runtest(input, exp):
     e,t = parse(input, Expr)

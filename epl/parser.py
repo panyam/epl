@@ -167,6 +167,9 @@ class TryMixin(object):
     def raise_expr(self, matches):
         return self.expr_class.as_raiseexpr(matches[0])
 
+class TypingMixin(object):
+    reserved = [ "int", "bool" ]
+
 class BaseTransformer(Transformer):
     def __init__(self,expr_class, optable):
         self.expr_class = expr_class
@@ -256,7 +259,3 @@ def make_parser(Expr, optable = None, *mixins):
             return self.transformer.transform(tree), tree
     return Parser()
 
-def parse(input, expr_class, optable = None):
-    mixins = [ BasicMixin, ProcMixin, LetRecMixin, RefMixin, TryMixin ]
-    theparser = make_parser(expr_class, optable, *mixins)
-    return theparser.parse(input)
