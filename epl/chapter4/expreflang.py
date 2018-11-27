@@ -1,6 +1,6 @@
 
 import typing
-from epl.unions import *
+from taggedunion import *
 from epl.chapter3 import letreclang
 
 class RefExpr(object):

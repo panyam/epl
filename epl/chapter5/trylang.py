@@ -1,6 +1,6 @@
 
 import typing
-from epl.unions import *
+from taggedunion import *
 from epl.chapter4 import lazylang
 from epl.chapter5 import continuations
 

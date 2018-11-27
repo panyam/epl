@@ -1,6 +1,6 @@
 
 import typing
-from epl.unions import *
+from taggedunion import *
 from epl.chapter4 import expreflang
 
 class AssignExpr(object):

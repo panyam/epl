@@ -1,6 +1,6 @@
 
 from epl import bp
-from epl.unions import *
+from taggedunion import *
 from epl.common import Lit
 
 class VarExpr(object):

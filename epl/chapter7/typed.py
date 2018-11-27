@@ -1,7 +1,7 @@
 
 import typing
 from epl import bp
-from epl.unions import *
+from taggedunion import *
 from epl.chapter5 import trylang
 from epl.chapter5 import continuations
 

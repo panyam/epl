@@ -1,6 +1,6 @@
 
 
-from epl.unions import *
+from taggedunion import *
 from epl.chapter3 import letlang
 
 ## Constructs for Procedures 

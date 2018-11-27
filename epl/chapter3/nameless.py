@@ -1,6 +1,6 @@
 
 import typing
-from epl.unions import *
+from taggedunion import *
 from epl.chapter3 import letlang
 from epl.chapter3 import proclang
 from epl.chapter3 import letreclang
