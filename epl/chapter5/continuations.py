@@ -65,7 +65,7 @@ class Eval(CaseMatcher):
         # Eval mappings with end continuations
         opfunc = env.get(opexpr.op)
         assert opfunc is not None, "No plug in found for operator: %s" % opexpr.op
-        nextcont = ExprListCont(self, env, cont, opexpr.exprs, opfunc)
+        nextcont = ExprListCont(self, env, cont, opexpr.arguments, opfunc)
         return nextcont.start()
 
     @case("ref")
@@ -253,7 +253,7 @@ class CallCont(Cont):
         # We just received operator result
         # so kick off arg 
         proc_cont = ApplyProcCont(self.Eval, self.env, self.nextcont, boundproc)
-        nextcont = ExprListCont(self.Eval, self.env, proc_cont, self.callexpr.args)
+        nextcont = ExprListCont(self.Eval, self.env, proc_cont, self.callexpr.arguments)
         return nextcont.start()
 
 class ApplyProcCont(Cont):

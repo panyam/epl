@@ -40,16 +40,16 @@ class ProcExpr(object):
             return "<Proc(%s) { %s }" % (", ".join(self.varnames), repr(self.body))
 
 class CallExpr(object):
-    def __init__(self, operator, *args):
+    def __init__(self, operator, *arguments):
         self.operator = operator
-        self.args = list(args)
+        self.arguments = list(arguments)
 
     def printables(self):
         yield 0, "Call"
         yield 1, "Operator:"
         yield 2, self.operator.printables()
         yield 1, "Args:"
-        for arg in self.args:
+        for arg in self.arguments:
             yield 2, arg.printables()
 
     def __eq__(self, another):
@@ -60,15 +60,15 @@ class CallExpr(object):
     def __eq__(self, another):
         if self.operator != another.operator:
             return False
-        if len(self.args) != len(another.args):
+        if len(self.arguments) != len(another.arguments):
             return False
-        for e1,e2 in zip(self.args, another.args):
+        for e1,e2 in zip(self.arguments, another.arguments):
             if e1 != e2:
                 return False
         return True
 
     def __repr__(self):
-        return "<Call (%s) in %s" % (self.operator, ", ".join(map(repr, self.args)))
+        return "<Call (%s) in %s" % (self.operator, ", ".join(map(repr, self.arguments)))
 
 
 class Expr(letlang.Expr):
@@ -85,14 +85,14 @@ class Eval(letlang.Eval):
     @case("callexpr")
     def valueOfCall(self, callexpr, env):
         boundproc = self.valueOf(callexpr.operator, env)
-        args = [self.valueOf(arg, env) for arg in callexpr.args]
-        return self.apply_proc(boundproc, args)
+        arguments = [self.valueOf(arg, env) for arg in callexpr.arguments]
+        return self.apply_proc(boundproc, arguments)
 
-    def apply_proc(self, boundproc, args):
+    def apply_proc(self, boundproc, arguments):
         procexpr, saved_env = boundproc.procexpr, boundproc.env
         curr_procexpr = procexpr
         curr_env = saved_env
-        curr_args = args
+        curr_args = arguments
 
         while curr_args and curr_procexpr.varnames:
             nargs = len(curr_procexpr.varnames)
@@ -113,7 +113,7 @@ class Eval(letlang.Eval):
                 # Only take what we need and return rest as a call expr
                 curr_procexpr = self.valueOf(curr_procexpr, newenv)
                 # Should curr_env = newenv?
-                # return self.apply_proc(newexpr, args[nargs:])
+                # return self.apply_proc(newexpr, arguments[nargs:])
 
             # after all case
             curr_args = rest_args

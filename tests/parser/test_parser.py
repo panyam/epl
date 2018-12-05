@@ -1,13 +1,13 @@
 
 from ipdb import set_trace
-from epl.bp import eprint
+from epl import bp
 from epl import parser
 from epl.common import Lit
 from epl.chapter3.letreclang import Expr
 
 def parse(input, exp):
-    mixins = [ parser.BasicMixin, parser.ProcMixin, parser.LetRecMixin ]
-    theparser = parser.make_parser(Expr, None, *mixins)
+    mixins = [ parser.BasicMixin, parser.LetMixin, parser.ProcMixin, parser.LetRecMixin ]
+    theparser = parser.make_parser(Expr, None, None, *mixins)
     return theparser.parse(input)
 
 def runtest(input, exp):
@@ -30,7 +30,6 @@ def test_operators():
 def test_parse_iszero():
     e1 = Expr.as_opexpr("?", Expr.as_lit(0))
     runtest("? ( 0 )", e1)
-        
 
 def test_parse_iszero_cust():
     e2 = Expr.as_iszero(Expr.as_lit(33))
@@ -41,8 +40,8 @@ def test_parse_diff():
     runtest("- ( 33, 44)", e2)
 
 def test_parse_tuple():
-    e2 = Expr.as_opexpr("/", Expr.as_lit(3), Expr.as_lit(4))
-    runtest("/ (3, 4)", e2)
+    e2 = Expr.as_opexpr("$", Expr.as_lit(3), Expr.as_lit(4))
+    runtest("$ (3, 4)", e2)
 
 def test_parse_letrec_double():
     e2 = Expr.as_letrec({

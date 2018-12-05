@@ -34,6 +34,7 @@ class DefaultEnv(IEnv):
         self.refs = {k:Ref(v) for k,v in values.items()}
 
     def getref(self, var):
+        if type(var) is not str: set_trace()
         if var in self.refs: return self.refs[var]
         elif self.parent: return self.parent.getref(var)
         else: return None

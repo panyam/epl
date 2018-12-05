@@ -1,16 +1,16 @@
 
 import pytest
-from epl import bp
-from epl.bp import eprint
 from epl.chapter4 import lazylang
-from tests.utils import runevaltest
 from tests.chapter4 import cases
+from tests import settings
 
 Expr = lazylang.Expr
 Eval = lazylang.Eval
 
 def runtest(input, exp, **extra_env):
-    return runevaltest(Expr, Eval, input, exp, **extra_env)
+    from tests.utils import runevaltest
+    with settings.push(Expr = Expr, Eval = Eval):
+        return runevaltest(input, exp, **extra_env)
 
 @pytest.mark.parametrize("input, expected", cases.lazy.values())
 def test_lazy(input, expected):

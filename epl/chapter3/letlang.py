@@ -50,24 +50,24 @@ class IsZeroExpr(object):
         return self.expr == another.expr
 
 class OpExpr(object):
-    def __init__(self, op, *exprs):
+    def __init__(self, op, *arguments):
         self.op = op
-        if exprs and len(exprs) == 1 and type(exprs[0]) is list:
-            self.exprs = exprs[0]
+        if arguments and len(arguments) == 1 and type(arguments[0]) is list:
+            self.arguments = arguments[0]
         else:
-            self.exprs = list(exprs)
+            self.arguments = list(arguments)
 
     def printables(self):
         yield 0, "Op (%s):" % self.op
-        for exp in self.exprs:
+        for exp in self.arguments:
             yield 1, exp.printables()
 
     def __eq__(self, another):
         return self.op == another.op and \
-               self.exprs == another.exprs
+               self.arguments == another.arguments
 
     def __repr__(self):
-        return "<Op(%s, [%s])>" % (self.op, ", ".join(map(repr, self.exprs)))
+        return "<Op(%s, [%s])>" % (self.op, ", ".join(map(repr, self.arguments)))
 
 class IfExpr(object):
     def __init__(self, cond, exp1, exp2):
@@ -156,10 +156,10 @@ class Eval(CaseMatcher):
         # We can get even more generic once we have procedures (proclang onwards)
         opfunc = env.get(opexpr.op)
         assert opfunc is not None, "No plug in found for operator: %s" % opexpr.op
-        return opfunc(self, env, opexpr.exprs)
+        return opfunc(self, env, opexpr.arguments)
 
     @case("tup")
-    def valueOfTUple(self, tup, env):
+    def valueOfTuple(self, tup, env):
         values = [self.valueOf(v,env) for v in tup.children]
         return TupleExpr(*values)
 

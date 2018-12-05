@@ -5,6 +5,16 @@ from taggedunion import *
 from epl.chapter5 import trylang
 from epl.chapter5 import continuations
 
+class TypeError(Exception):
+    def __init__(self, expected, found):
+        Exception.__init__(self, "Expected type: %s, Found: %s" % (expected, type))
+        self.expected = expected
+        self.found = found
+
+def ensure_type(expected, found):
+    if expected != found:
+        raise TypeError(expected, found)
+
 class BoxedType(object):
     def __init__(self, name, thetype):
         self.name = name
@@ -42,16 +52,16 @@ class TupleType(object):
         return hash(self.children)
 
 class FuncType(object):
-    def __init__(self, input_types, return_type):
-        self.input_types = input_types
-        self.return_type = return_type
+    def __init__(self, argtypes, rettype):
+        self.argtypes = argtypes
+        self.rettype = rettype
 
     def __eq__(self, another):
-        return self.input_types == another.input_types and \
-                self.return_type == another.return_type
+        return self.argtypes == another.argtypes and \
+                self.rettype == another.rettype
 
     def __hash__(self):
-        return hash(tuple(self.input_types + (self.return_type,)))
+        return hash(tuple(self.argtypes + (self.rettype,)))
 
 class Type(Union):
     leaf = Variant(str)
@@ -71,23 +81,23 @@ class TypeOf(CaseMatcher):
 
     @case("var")
     def typeOfVar(self, var, tenv):
-        return tenv.get(var)
+        return tenv.get(var.name)
 
     @case("tup")
-    def typeOfTupExpr(self, tupexpr, tenv):
-        childtypes = [self(t, tenv) for t in tupexpr.children]
+    def typeOfTupExpr(self, tup, tenv):
+        childtypes = [self(t, tenv) for t in tup.children]
         return Type.as_tup(childtypes)
 
     @case("iszero")
     def typeOfIsZero(self, iszero, tenv):
-        t = self(iszero.expr)
+        t = self(iszero.expr, tenv)
         assert t.is_leaf and t.leaf == "int"
         return Type.as_leaf("bool")
 
     @case("opexpr")
     def typeOfOpExpr(self, opexpr, tenv):
         # For now assume opexpr takes all children of the same type so return type is same as child type
-        argtypes = map(self, opexpr.children)
+        argtypes = [self(a, tenv) for a in opexpr.arguments]
         assert all(a.is_leaf for a in argtypes)
         return argtypes[0]
 
@@ -95,7 +105,7 @@ class TypeOf(CaseMatcher):
     def typeOfIfExpr(self, ifexpr, tenv):
         # For now assume opexpr takes all children of the same type so return type is same as child type
         condtype = self(ifexpr.cond, tenv)
-        assert condtype.is_leaf and condtype.leaf == "bool"
+        ensure_type(condtype, Type.as_leaf('bool'))
         exp1type = self(ifexpr.expr1, tenv)
         exp2type = self(ifexpr.expr1, tenv)
         assert exp1type == exp2type
@@ -103,9 +113,8 @@ class TypeOf(CaseMatcher):
 
     @case("let")
     def typeOfLet(self, let, tenv):
-        newenv = tenv.push()
         vartypes = {k: self(v, tenv) for k,v in let.mappings.items()}
-        newenv.extend(**vartypes)
+        newenv = tenv.extend(**vartypes)
         bodytype = self(let.body, newenv)
         return bodytype
 
@@ -113,13 +122,14 @@ class TypeOf(CaseMatcher):
     def typeOfLetRec(self, letrec, tenv):
         newenv = tenv.push()
         for proc in letrec.procs.values():
-            newenv.setone(proc.name, Type.as_func(proc.input_types, proc.return_type))
-        bodytype = self(letrec.body, newenv)
+            newenv.setone(proc.name, Type.as_func(proc.argtypes, proc.rettype))
+        body = letrec.body
+        bodytype = self(body, newenv)
         return bodytype
 
     @case("procexpr")
     def typeOfProcExpr(self, procexpr, tenv):
-        return Type.as_func(procexpr.input_types, procexpr.return_type)
+        return Type.as_func(procexpr.argtypes, procexpr.rettype)
 
     @case("block")
     def typeOfBlock(self, block, tenv):
@@ -160,26 +170,26 @@ class TypeOf(CaseMatcher):
         return Type.as_box("lazy", thetype)
 
     @case("thunk")
-    def valueOfThunk(self, thunk, tenv):
+    def typeOfThunk(self, thunk, tenv):
         exptype = self(thunk.expr, tenv)
         assert exptype.is_box and exptype.box.name == "lazy"
         return exptype.box.thetype
 
     @case("callexpr")
-    def valueOfCall(self, callexpr, tenv):
+    def typeOfCall(self, callexpr, tenv):
         optype = self(callexpr.operator, tenv)
-        argtypes = [self(e, tenv) for e in callexpr.exprs]
-        set_trace()
-        return optype.return_type
+        argtypes = [self(e, tenv) for e in callexpr.arguments]
+        optype.func
+        return optype.rettype
 
     @case("tryexpr")
-    def valueOfTry(self, tryexpr, tenv):
+    def typeOfTry(self, tryexpr, tenv):
         exptype = self(tryexpr.expr, tenv)
         handlertype = self(tryexpr.handler, tenv)
-        assert exptype == handlertype
+        ensure_type(exp_type, handlertype)
         return exptype
 
     @case("raiseexpr")
-    def valueOfRaise(self, raiseexpr, tenv):
+    def typeOfRaise(self, raiseexpr, tenv):
         exptype = self(raiseexpr.expr, tenv)
         return Type.as_box("exception", exptype)
