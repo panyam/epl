@@ -19,4 +19,16 @@ checked = {
     "proc":     ( "proc (x : int) -> int -(x, 11)",
                    Type.as_func([Type.as_leaf('int')],
                                  Type.as_leaf('int')) ),
+    "proc2":    ( "proc (x : int) -(x, 11)",
+                   Type.as_func([Type.as_leaf('int')], None) ),
+}
+
+inferred = {
+    "case1":  (
+        """
+        letrec
+            even (x : int) -> ? = if isz(x) then 1 else (odd -(x, 1))
+            odd (x : ?) -> bool = if isz(x) then 0 else (even -(x, 1))
+            in (odd 13)
+        """, True )
 }

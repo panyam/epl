@@ -3,19 +3,9 @@ import typing
 from epl import bp
 from taggedunion import *
 from epl.chapter5 import trylang
-from epl.chapter5 import continuations
+from epl.chapter7.utils import *
 
-class TypeError(Exception):
-    def __init__(self, expected, found):
-        Exception.__init__(self, "Expected type: %s, Found: %s" % (expected, type))
-        self.expected = expected
-        self.found = found
-
-def ensure_type(expected, found):
-    if expected != found:
-        raise TypeError(expected, found)
-
-class BoxedType(object):
+class TaggedType(object):
     def __init__(self, name, thetype):
         self.name = name
         self.thetype = thetype
@@ -67,10 +57,29 @@ class Type(Union):
     leaf = Variant(str)
     tup = Variant(TupleType)
     func = Variant(FuncType)
-    box = Variant(BoxedType)
+    tagged = Variant(TaggedType)
 
     def __hash__(self):
         return hash(self.variant_value)
+
+class Stringifier(CaseMatcher):
+    __caseon__ = Type
+
+    @case("leaf")
+    def stringifyLeaf(self, leaf):
+        return leaf
+
+    @case("tup")
+    def stringifyTup(self, tup):
+        return "({})".format(", ".join(map(self, tup.children)))
+
+    @case("func")
+    def stringifyFunc(self, func):
+        return "({} -> {})".format(" -> ".join(map(self, func.argtypes)), self(func.rettype))
+
+    @case("tagged")
+    def stringifyTagged(self, tragged):
+        return "[{} {}]".format(tagged.name, self(tagged.thetype))
 
 class TypeOf(CaseMatcher):
     __caseon__ = trylang.Expr
@@ -148,7 +157,7 @@ class TypeOf(CaseMatcher):
     @case("ref")
     def typeOfRef(self, ref, tenv):
         thetype = self(ref.expr, tenv)
-        return Type.as_box("ref", thetype)
+        return Type.as_tagged("ref", thetype)
 
     @case("setref")
     def typeOfSetRef(self, setref, tenv):
@@ -167,13 +176,13 @@ class TypeOf(CaseMatcher):
     @case("lazy")
     def typeOfLazyExpr(self, lazy, tenv):
         thetype = self(lazy.expr, tenv)
-        return Type.as_box("lazy", thetype)
+        return Type.as_tagged("lazy", thetype)
 
     @case("thunk")
     def typeOfThunk(self, thunk, tenv):
         exptype = self(thunk.expr, tenv)
-        assert exptype.is_box and exptype.box.name == "lazy"
-        return exptype.box.thetype
+        assert exptype.is_tagged and exptype.tagged.name == "lazy"
+        return exptype.tagged.thetype
 
     @case("callexpr")
     def typeOfCall(self, callexpr, tenv):
@@ -192,4 +201,4 @@ class TypeOf(CaseMatcher):
     @case("raiseexpr")
     def typeOfRaise(self, raiseexpr, tenv):
         exptype = self(raiseexpr.expr, tenv)
-        return Type.as_box("exception", exptype)
+        return Type.as_tagged("exception", exptype)

@@ -238,10 +238,10 @@ class TypingMixin(object):
 
     def func_type_decl(self, matches):
         bp.debug()
+        return None
 
     def no_type_decl(self, matches):
         assert len(matches) == 0
-        bp.debug()
         return None
 
     def basic_type_decl(self, matches):
@@ -251,6 +251,7 @@ class TypingMixin(object):
 
     def tuple_type_decl(self, matches):
         bp.debug()
+        return None
 
 class BaseTransformer(Transformer):
     def __init__(self,Expr, Type, optable):
