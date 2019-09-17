@@ -116,7 +116,7 @@ class TypeOf(CaseMatcher):
         condtype = self(ifexpr.cond, tenv)
         ensure_type(condtype, Type.as_leaf('bool'))
         exp1type = self(ifexpr.expr1, tenv)
-        exp2type = self(ifexpr.expr1, tenv)
+        exp2type = self(ifexpr.expr2, tenv)
         assert exp1type == exp2type
         return exp2type
 

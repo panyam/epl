@@ -11,7 +11,7 @@ from tests.chapter7 import utils
 @pytest.mark.parametrize("input, expected", cases.inferred.values())
 def test_checked(input, expected):
     with settings.push(Expr = trylang.Expr,
-                       TypeOf = typed.TypeOf,
+                       TypeOf = inferred.TypeOf,
                        Type = typed.Type, 
                        print_tree = False):
         utils.runtest(input, expected)
